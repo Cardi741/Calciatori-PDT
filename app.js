@@ -117,7 +117,8 @@ const PACK_TYPES = {
 }; 
  
 let users = { "Default": { credits: INITIAL_CREDITS, collection: {}, lastDailyBonus: 0 } }; 
-let currentUser = "Default"; let showMissing = false; let selectedCardId = null; 
+let currentUser = "Default"; let showMissing = false; 
+let selectedCardId = null; let requestedCardId = null;
  
 async function loadState() { 
     const saved = localStorage.getItem('tcg_users'); 
@@ -197,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusEl = document.getElementById('recipient-status'); 
     const sendBtn = document.getElementById('send-card-btn'); 
     const cardPicker = document.getElementById('card-picker-grid'); 
+    const requestPicker = document.getElementById('request-picker-grid');
  
     function updateUI() { 
         if (!users[currentUser]) {
@@ -310,6 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.appendChild(b); 
         }); 
         renderCardPicker(); 
+        renderRequestPicker();
     } 
  
     function renderCardPicker() { 
@@ -318,77 +321,266 @@ document.addEventListener('DOMContentLoaded', () => {
             const c = CARDS.find(x => x.id == id); if (c && user.collection[id] > 0) { 
                 const d = document.createElement('div'); d.className = `card rarity-${c.rarity.toLowerCase()} ${selectedCardId==id?'selected':''}`; 
                 d.style.borderColor = c.color; d.innerHTML = `<h4>${c.name}</h4><div class="quantity">x${user.collection[id]}</div>`; 
-                d.onclick = () => { selectedCardId = id; document.getElementById('selected-card-info').textContent = "Selezionato: " + c.name; renderCardPicker(); validateTransfer(); }; 
+                d.onclick = () => { 
+                    selectedCardId = id; 
+                    document.getElementById('offered-card-info').textContent = "Offri: " + c.name; 
+                    renderCardPicker(); 
+                    validateTransfer(); 
+                }; 
                 cardPicker.appendChild(d); 
             } 
         }); 
     } 
+
+    function renderRequestPicker() {
+        requestPicker.innerHTML = '';
+        CARDS.forEach(c => {
+            const d = document.createElement('div'); 
+            d.className = `card rarity-${c.rarity.toLowerCase()} ${requestedCardId==c.id?'selected':''}`; 
+            d.style.borderColor = c.color; 
+            d.innerHTML = `<h4>${c.name}</h4>`; 
+            d.onclick = () => { 
+                requestedCardId = c.id; 
+                document.getElementById('requested-card-info').textContent = "Richiedi: " + c.name; 
+                renderRequestPicker(); 
+                validateTransfer(); 
+            }; 
+            requestPicker.appendChild(d); 
+        });
+    }
  
+    let validationTimeout;
     async function validateTransfer() { 
         const email = friendEmail.value.trim().toLowerCase(); 
-        if (!email.includes('@') || email === auth?.currentUser?.email) { sendBtn.disabled = true; return; } 
-        statusEl.textContent = "Verifica destinatario..."; const safe = email.replace(/\./g, ','); 
-        const snap = await db.ref("emailToUid/" + safe).once("value"); 
-        if (snap.exists()) { statusEl.textContent = "Amico trovato! ✓"; statusEl.style.color = "#22c55e"; if (selectedCardId) { sendBtn.disabled = false; sendBtn.style.opacity = "1"; } } 
-        else { statusEl.textContent = "Amico non registrato"; statusEl.style.color = "#f59e0b"; sendBtn.disabled = true; sendBtn.style.opacity = "0.5"; } 
+        if (!email.includes('@')) { 
+            statusEl.textContent = ""; sendBtn.disabled = true; return; 
+        } 
+        if (auth?.currentUser && email === auth.currentUser.email) {
+            statusEl.textContent = "Non puoi scambiare con te stesso";
+            statusEl.style.color = "#ef4444";
+            sendBtn.disabled = true;
+            return;
+        }
+
+        statusEl.textContent = "Verifica destinatario..."; 
+        try {
+            const safe = email.replace(/\./g, ','); 
+            const snap = await db.ref("emailToUid/" + safe).once("value"); 
+            if (snap.exists()) { 
+                statusEl.textContent = "Amico trovato! ✓"; statusEl.style.color = "#22c55e"; 
+                if (selectedCardId && requestedCardId) { 
+                    sendBtn.disabled = false; sendBtn.style.opacity = "1"; 
+                } 
+            } else { 
+                statusEl.textContent = "Amico non registrato"; statusEl.style.color = "#f59e0b"; sendBtn.disabled = true; sendBtn.style.opacity = "0.5"; 
+            } 
+        } catch (e) {
+            statusEl.textContent = "Errore connessione";
+            sendBtn.disabled = true;
+        }
     } 
  
-    friendEmail.oninput = validateTransfer; 
+    friendEmail.oninput = () => {
+        clearTimeout(validationTimeout);
+        validationTimeout = setTimeout(validateTransfer, 500);
+    };
     sendBtn.onclick = async () => { 
-        const email = friendEmail.value.trim().toLowerCase(); const user = users[currentUser]; 
-        if (!confirm("Inviare la carta a " + email + "?")) return; 
+        if (!auth?.currentUser) { showToast("Accedi per scambiare!", "danger"); return; }
+        const email = friendEmail.value.trim().toLowerCase(); 
+        if (!confirm(`Inviare proposta di scambio a ${email}?`)) return; 
+        
         document.getElementById('transfer-spinner').classList.remove('hidden');
         sendBtn.disabled = true;
+        
         try {
             const safe = email.replace(/\./g, ','); 
             const uidSnap = await db.ref("emailToUid/" + safe).once("value"); 
             const recUid = uidSnap.val(); 
-            const recSnap = await db.ref("users/" + recUid).once("value"); 
-            let recData = recSnap.val(); 
-            
-            if (!recData) {
-                showToast("Errore: Destinatario non inizializzato.", "danger");
-                return;
-            }
 
-            user.collection[selectedCardId]--; 
-            if (user.collection[selectedCardId] === 0) delete user.collection[selectedCardId]; 
+            const tradeData = {
+                from: auth.currentUser.email,
+                fromUid: auth.currentUser.uid,
+                toUid: recUid,
+                offeredId: selectedCardId,
+                requestedId: requestedCardId,
+                timestamp: Date.now(),
+                status: 'pending'
+            };
+
+            const newTradeRef = db.ref("pendingTrades").push();
+            await newTradeRef.set(tradeData);
             
-            if (!recData.collection) recData.collection = {}; 
-            recData.collection[selectedCardId] = (recData.collection[selectedCardId] || 0) + 1; 
-            
-            await db.ref("users/" + recUid).set(recData); 
-            await saveState(); 
-            
-            showToast("Carta inviata con successo!", "success"); 
-            selectedCardId = null; 
-            document.getElementById('selected-card-info').textContent = "";
+            showToast("Proposta di scambio inviata!", "success"); 
+            selectedCardId = null; requestedCardId = null;
+            document.getElementById('offered-card-info').textContent = "Offri: Seleziona una carta";
+            document.getElementById('requested-card-info').textContent = "Richiedi: Seleziona una carta";
             updateUI(); 
         } catch (e) {
             console.error(e);
-            showToast("Errore durante l'invio", "danger");
+            showToast("Errore durante l'invio della proposta", "danger");
         } finally {
             document.getElementById('transfer-spinner').classList.add('hidden');
             validateTransfer();
         }
     }; 
+
+    let tradesListener = null;
+    function listenForPendingTrades() {
+        if (!auth?.currentUser) return;
+        if (tradesListener) {
+            db.ref("pendingTrades").orderByChild("toUid").equalTo(auth.currentUser.uid).off("value", tradesListener);
+        }
+        
+        tradesListener = (snap) => {
+            const list = document.getElementById('pending-trades-list');
+            list.innerHTML = '';
+            const trades = snap.val();
+            
+            if (!trades) {
+                list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px;">Nessuna proposta in sospeso.</p>';
+                return;
+            }
+
+            let pendingCount = 0;
+            Object.entries(trades).forEach(([key, t]) => {
+                if (t.status !== 'pending') return;
+                pendingCount++;
+                const offered = CARDS.find(c => c.id == t.offeredId);
+                const requested = CARDS.find(c => c.id == t.requestedId);
+                if (!offered || !requested) return;
+
+                const div = document.createElement('div');
+                div.className = 'trade-offer-item';
+                div.innerHTML = `
+                    <div class="offer-info">
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);">Da: ${t.from}</span>
+                        <div class="offer-details">
+                            <span style="color: var(--success); font-weight: bold;">Offre: ${offered.name}</span>
+                            <span style="color: var(--text-secondary);">🔄</span>
+                            <span style="color: var(--accent); font-weight: bold;">Chiede: ${requested.name}</span>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="accept-btn">Accetta</button>
+                        <button class="decline-btn">Rifiuta</button>
+                    </div>
+                `;
+                
+                div.querySelector('.accept-btn').onclick = () => handleTradeAction(key, 'accept');
+                div.querySelector('.decline-btn').onclick = () => handleTradeAction(key, 'decline');
+                list.appendChild(div);
+            });
+
+            if (pendingCount === 0) {
+                list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px;">Nessuna proposta in sospeso.</p>';
+            }
+        };
+
+        db.ref("pendingTrades")
+            .orderByChild("toUid")
+            .equalTo(auth.currentUser.uid)
+            .on("value", tradesListener);
+    }
+
+    async function handleTradeAction(tradeKey, action) {
+        if (!auth?.currentUser) return;
+        const tradeRef = db.ref("pendingTrades/" + tradeKey);
+        const snap = await tradeRef.once("value");
+        const t = snap.val();
+
+        if (!t || t.status !== 'pending') return;
+
+        if (action === 'decline') {
+            await tradeRef.update({ status: 'declined' });
+            showToast("Scambio rifiutato");
+            return;
+        }
+
+        // Action: Accept
+        const myUser = users[currentUser];
+        
+        if (!myUser.collection[t.requestedId] || myUser.collection[t.requestedId] < 1) {
+            showToast("Non hai la carta richiesta!", "danger");
+            return;
+        }
+
+        try {
+            const senderSnap = await db.ref("users/" + t.fromUid).once("value");
+            const senderData = senderSnap.val();
+            
+            if (!senderData || !senderData.collection[t.offeredId] || senderData.collection[t.offeredId] < 1) {
+                showToast("Il mittente non ha più la carta offerta!", "danger");
+                await tradeRef.update({ status: 'expired' });
+                return;
+            }
+
+            // Prepare Atomic Update
+            const updates = {};
+            
+            // Update Sender
+            senderData.collection[t.offeredId]--;
+            if (senderData.collection[t.offeredId] === 0) delete senderData.collection[t.offeredId];
+            senderData.collection[t.requestedId] = (senderData.collection[t.requestedId] || 0) + 1;
+            updates["users/" + t.fromUid] = senderData;
+
+            // Update Me
+            myUser.collection[t.requestedId]--;
+            if (myUser.collection[t.requestedId] === 0) delete myUser.collection[t.requestedId];
+            myUser.collection[t.offeredId] = (myUser.collection[t.offeredId] || 0) + 1;
+            updates["users/" + auth.currentUser.uid] = myUser;
+
+            // Update Trade Status
+            updates["pendingTrades/" + tradeKey + "/status"] = 'accepted';
+
+            await db.ref().update(updates);
+            
+            // Sync local state
+            users[currentUser] = myUser;
+            localStorage.setItem('tcg_users', JSON.stringify(users));
+
+            showToast("Scambio completato con successo!", "success");
+            updateUI();
+        } catch (e) {
+            console.error(e);
+            showToast("Errore durante lo scambio", "danger");
+        }
+    }
  
     document.getElementById('google-login').onclick = () => { 
-        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); 
+        if (!auth) {
+            showToast("Errore: Firebase non inizializzato.", "danger");
+            return;
+        }
+        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+            .catch(err => {
+                console.error("Login Error:", err);
+                if (err.code === "auth/unauthorized-domain") {
+                    showToast("Errore: Dominio non autorizzato in Firebase Console.", "danger");
+                } else {
+                    showToast("Errore di accesso: " + err.message, "danger");
+                }
+            });
     }; 
     document.getElementById('google-logout').onclick = () => {
-        auth.signOut();
+        auth?.signOut().catch(err => showToast("Errore logout: " + err.message, "danger"));
     }; 
     auth?.onAuthStateChanged(async (u) => { 
         if (u) { 
             document.getElementById('google-login').classList.add('hidden'); 
             document.getElementById('user-logged-in').classList.remove('hidden'); 
             document.getElementById('user-info').textContent = u.displayName; 
+            document.getElementById('p2p-trading').classList.remove('hidden');
             await migrateLocalToCloud(u);
+            listenForPendingTrades();
             updateUI();
         } else {
+            if (tradesListener && auth?.currentUser) {
+                db.ref("pendingTrades").orderByChild("toUid").equalTo(auth.currentUser.uid).off("value", tradesListener);
+                tradesListener = null;
+            }
             document.getElementById('google-login').classList.remove('hidden'); 
             document.getElementById('user-logged-in').classList.add('hidden'); 
+            document.getElementById('p2p-trading').classList.add('hidden');
             currentUser = "Default";
             updateUI();
         }
