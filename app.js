@@ -425,61 +425,89 @@ document.addEventListener('DOMContentLoaded', () => {
     }; 
 
     let tradesListener = null;
+    let currentTradeTab = 'received';
+    
     function listenForPendingTrades() {
         if (!auth?.currentUser) return;
         if (tradesListener) {
-            db.ref("pendingTrades").orderByChild("toUid").equalTo(auth.currentUser.uid).off("value", tradesListener);
+            db.ref("pendingTrades").off("value", tradesListener);
         }
         
         tradesListener = (snap) => {
             const list = document.getElementById('pending-trades-list');
             list.innerHTML = '';
-            const trades = snap.val();
+            const allTrades = snap.val();
             
-            if (!trades) {
-                list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px;">Nessuna proposta in sospeso.</p>';
+            if (!allTrades) {
+                list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px;">Nessuna proposta.</p>';
                 return;
             }
 
-            let pendingCount = 0;
-            Object.entries(trades).forEach(([key, t]) => {
+            const myUid = auth.currentUser.uid;
+            let displayCount = 0;
+
+            Object.entries(allTrades).forEach(([key, t]) => {
                 if (t.status !== 'pending') return;
-                pendingCount++;
+
                 const offered = CARDS.find(c => c.id == t.offeredId);
                 const requested = CARDS.find(c => c.id == t.requestedId);
                 if (!offered || !requested) return;
 
                 const div = document.createElement('div');
                 div.className = 'trade-offer-item';
-                div.innerHTML = `
-                    <div class="offer-info">
-                        <span style="font-size: 0.8rem; color: var(--text-secondary);">Da: ${t.from}</span>
-                        <div class="offer-details">
-                            <span style="color: var(--success); font-weight: bold;">Offre: ${offered.name}</span>
-                            <span style="color: var(--text-secondary);">🔄</span>
-                            <span style="color: var(--accent); font-weight: bold;">Chiede: ${requested.name}</span>
+
+                if (currentTradeTab === 'received' && t.toUid === myUid) {
+                    displayCount++;
+                    div.innerHTML = `
+                        <div class="offer-info">
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);">Da: ${t.from}</span>
+                            <div class="offer-details">
+                                <span style="color: var(--success); font-weight: bold;">Offre: ${offered.name}</span>
+                                <span style="color: var(--text-secondary);">🔄</span>
+                                <span style="color: var(--accent); font-weight: bold;">Chiede: ${requested.name}</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="btn-group">
-                        <button class="accept-btn">Accetta</button>
-                        <button class="decline-btn">Rifiuta</button>
-                    </div>
-                `;
-                
-                div.querySelector('.accept-btn').onclick = () => handleTradeAction(key, 'accept');
-                div.querySelector('.decline-btn').onclick = () => handleTradeAction(key, 'decline');
-                list.appendChild(div);
+                        <div class="btn-group">
+                            <button class="accept-btn">Accetta</button>
+                            <button class="decline-btn">Rifiuta</button>
+                        </div>
+                    `;
+                    div.querySelector('.accept-btn').onclick = () => handleTradeAction(key, 'accept');
+                    div.querySelector('.decline-btn').onclick = () => handleTradeAction(key, 'decline');
+                    list.appendChild(div);
+                } 
+                else if (currentTradeTab === 'sent' && t.fromUid === myUid) {
+                    displayCount++;
+                    div.innerHTML = `
+                        <div class="offer-info">
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);">Per: (Caricamento...)</span>
+                            <div class="offer-details">
+                                <span style="color: var(--success); font-weight: bold;">Offri: ${offered.name}</span>
+                                <span style="color: var(--text-secondary);">🔄</span>
+                                <span style="color: var(--accent); font-weight: bold;">Chiedi: ${requested.name}</span>
+                            </div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="decline-btn">Annulla</button>
+                        </div>
+                    `;
+                    // Fetch recipient email for sent trades
+                    db.ref(`users/${t.toUid}/email`).once('value').then(emailSnap => {
+                        const emailSpan = div.querySelector('.offer-info span');
+                        if (emailSpan) emailSpan.textContent = `Per: ${emailSnap.val() || 'Utente'}`;
+                    });
+                    
+                    div.querySelector('.decline-btn').onclick = () => handleTradeAction(key, 'cancel');
+                    list.appendChild(div);
+                }
             });
 
-            if (pendingCount === 0) {
-                list.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px;">Nessuna proposta in sospeso.</p>';
+            if (displayCount === 0) {
+                list.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px;">Nessuna proposta ${currentTradeTab === 'received' ? 'ricevuta' : 'inviata'}.</p>`;
             }
         };
 
-        db.ref("pendingTrades")
-            .orderByChild("toUid")
-            .equalTo(auth.currentUser.uid)
-            .on("value", tradesListener);
+        db.ref("pendingTrades").on("value", tradesListener);
     }
 
     async function handleTradeAction(tradeKey, action) {
@@ -490,9 +518,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!t || t.status !== 'pending') return;
 
-        if (action === 'decline') {
-            await tradeRef.update({ status: 'declined' });
-            showToast("Scambio rifiutato");
+        if (action === 'decline' || action === 'cancel') {
+            await tradeRef.update({ status: action === 'decline' ? 'declined' : 'cancelled' });
+            showToast(action === 'decline' ? "Scambio rifiutato" : "Scambio annullato");
             return;
         }
 
@@ -555,7 +583,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err => {
                 console.error("Login Error:", err);
                 if (err.code === "auth/unauthorized-domain") {
-                    showToast("Errore: Dominio non autorizzato in Firebase Console.", "danger");
+                    const domain = window.location.hostname;
+                    alert(`ACCESSO BLOCCATO: Il dominio "${domain}" non è autorizzato.\n\nQuesto succede perché Firebase deve sapere che il tuo sito è "sicuro".\n\nPer risolvere:\n1. Vai su Firebase Console\n2. Clicca su "Authentication" > "Settings" > "Authorized Domains"\n3. Clicca "Add Domain" e incolla esattamente: ${domain}\n\nNota: Se stai usando GitHub Pages, il dominio è solitamente cardi741.github.io`);
+                    showToast("Configurazione Firebase richiesta", "danger");
                 } else {
                     showToast("Errore di accesso: " + err.message, "danger");
                 }
@@ -564,18 +594,34 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('google-logout').onclick = () => {
         auth?.signOut().catch(err => showToast("Errore logout: " + err.message, "danger"));
     }; 
+    let userDbListener = null;
     auth?.onAuthStateChanged(async (u) => { 
         if (u) { 
             document.getElementById('google-login').classList.add('hidden'); 
             document.getElementById('user-logged-in').classList.remove('hidden'); 
             document.getElementById('user-info').textContent = u.displayName; 
             document.getElementById('p2p-trading').classList.remove('hidden');
+            
             await migrateLocalToCloud(u);
+            
+            // Real-time synchronization for user data (collection/credits)
+            if (userDbListener) db.ref("users/" + u.uid).off("value", userDbListener);
+            userDbListener = db.ref("users/" + u.uid).on("value", (snap) => {
+                if (snap.exists()) {
+                    users[u.email] = snap.val();
+                    currentUser = u.email;
+                    updateUI();
+                }
+            });
+
             listenForPendingTrades();
-            updateUI();
         } else {
+            if (userDbListener && auth?.currentUser) {
+                db.ref("users/" + auth.currentUser.uid).off("value", userDbListener);
+                userDbListener = null;
+            }
             if (tradesListener && auth?.currentUser) {
-                db.ref("pendingTrades").orderByChild("toUid").equalTo(auth.currentUser.uid).off("value", tradesListener);
+                db.ref("pendingTrades").off("value", tradesListener);
                 tradesListener = null;
             }
             document.getElementById('google-login').classList.remove('hidden'); 
@@ -628,6 +674,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-shop').onclick = () => showView('shop-view'); 
     document.getElementById('show-collection').onclick = () => showView('collection-view'); 
     document.getElementById('show-trade').onclick = () => showView('trade-view'); 
+
+    // Trade tab switching
+    document.getElementById('tab-received').onclick = () => {
+        currentTradeTab = 'received';
+        document.getElementById('tab-received').style.opacity = '1';
+        document.getElementById('tab-sent').style.opacity = '0.4';
+        listenForPendingTrades();
+    };
+    document.getElementById('tab-sent').onclick = () => {
+        currentTradeTab = 'sent';
+        document.getElementById('tab-sent').style.opacity = '1';
+        document.getElementById('tab-received').style.opacity = '0.4';
+        listenForPendingTrades();
+    };
     document.getElementById('show-mercato').onclick = () => showView('mercato-view'); 
     document.getElementById('close-pack-btn').onclick = () => { document.getElementById('pack-modal').classList.add('hidden'); }; 
     zoomOverlay.onclick = () => zoomOverlay.classList.add('hidden'); 
