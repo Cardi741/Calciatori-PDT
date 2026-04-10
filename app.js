@@ -130,12 +130,25 @@ async function loadState() {
 async function saveState() { 
     localStorage.setItem('tcg_users', JSON.stringify(users)); 
     localStorage.setItem('tcg_last_user', currentUser); 
-    if (auth && auth.currentUser && users[currentUser]) { 
+    
+    if (auth && auth.currentUser && users[currentUser] && db) { 
         const data = {...users[currentUser]}; 
         data.email = auth.currentUser.email; 
-        await db.ref("users/" + auth.currentUser.uid).set(data); 
-        const safeEmail = auth.currentUser.email.replace(/\./g, ','); 
-        await db.ref("emailToUid/" + safeEmail).set(auth.currentUser.uid); 
+        
+        const safeEmail = auth.currentUser.email.toLowerCase().replace(/\./g, ','); 
+        const updates = {};
+        updates["users/" + auth.currentUser.uid] = data;
+        updates["emailToUid/" + safeEmail] = auth.currentUser.uid;
+        
+        console.log("Tentativo di salvataggio su Firebase...");
+        db.ref().update(updates)
+            .then(() => console.log("Salvataggio Firebase completato con successo!"))
+            .catch(err => {
+                console.error("Errore salvataggio Firebase:", err);
+                if (err.code === "PERMISSION_DENIED") {
+                    console.warn("ATTENZIONE: Verifica di aver impostato le Security Rules correttamente nella console Firebase.");
+                }
+            });
     } 
 } 
 
@@ -205,13 +218,23 @@ document.addEventListener('DOMContentLoaded', () => {
             users[currentUser] = { credits: INITIAL_CREDITS, collection: {}, lastDailyBonus: 0 };
         }
         const user = users[currentUser]; 
-        const now = Date.now(); 
-        if (now - (user.lastDailyBonus || 0) > 86400000) { 
+        
+        // Bonus giornaliero: si resetta a mezzanotte del giorno successivo
+        const now = new Date();
+        const lastBonusDate = user.lastDailyBonus ? new Date(user.lastDailyBonus) : new Date(0);
+        
+        // Confronto solo anno, mese e giorno per vedere se è passato il giorno
+        const isNewDay = now.getFullYear() > lastBonusDate.getFullYear() || 
+                        now.getMonth() > lastBonusDate.getMonth() || 
+                        now.getDate() > lastBonusDate.getDate();
+
+        if (isNewDay) { 
             user.credits += 100; 
-            user.lastDailyBonus = now; 
-            showToast("Bonus giornaliero +100 Crediti!", "success"); 
+            user.lastDailyBonus = now.getTime(); 
+            showToast("✨ Bonus del giorno: +100 Crediti!", "success"); 
             saveState(); 
         } 
+        
         credEl.textContent = user.credits; 
         renderCollection(); 
         renderShop(); 
@@ -239,7 +262,12 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.entries(PACK_TYPES).forEach(([id, p]) => { 
             const d = document.createElement('div'); d.className = `pack pack-${id}`; 
             d.innerHTML = `<h3>${p.name}</h3><p>${p.cost} Crediti</p><button class="buy-btn">Apri</button>`; 
-            d.querySelector('button').onclick = () => { 
+            
+            const btn = d.querySelector('button');
+            // Supporto touch per iPhone
+            btn.addEventListener('touchstart', (e) => e.stopPropagation(), {passive: true});
+
+            btn.onclick = () => { 
                 const res = openPack(id); if (res) { 
                     document.getElementById('pack-modal').classList.remove('hidden'); 
                     document.getElementById('close-pack-btn').classList.add('hidden');
@@ -350,11 +378,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
  
     let validationTimeout;
-    async function validateTransfer() { 
+    function validateTransfer() { 
         const email = friendEmail.value.trim().toLowerCase(); 
-        if (!email.includes('@')) { 
+        if (!email.includes('@') || email.length < 5) { 
             statusEl.textContent = ""; sendBtn.disabled = true; return; 
         } 
+        
         if (auth?.currentUser && email === auth.currentUser.email) {
             statusEl.textContent = "Non puoi scambiare con te stesso";
             statusEl.style.color = "#ef4444";
@@ -363,21 +392,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         statusEl.textContent = "Verifica destinatario..."; 
-        try {
-            const safe = email.replace(/\./g, ','); 
-            const snap = await db.ref("emailToUid/" + safe).once("value"); 
-            if (snap.exists()) { 
-                statusEl.textContent = "Amico trovato! ✓"; statusEl.style.color = "#22c55e"; 
-                if (selectedCardId && requestedCardId) { 
-                    sendBtn.disabled = false; sendBtn.style.opacity = "1"; 
-                } 
-            } else { 
-                statusEl.textContent = "Amico non registrato"; statusEl.style.color = "#f59e0b"; sendBtn.disabled = true; sendBtn.style.opacity = "0.5"; 
-            } 
-        } catch (e) {
-            statusEl.textContent = "Errore connessione";
-            sendBtn.disabled = true;
+        statusEl.style.color = "var(--text-secondary)";
+        
+        if (!db) {
+            statusEl.textContent = "Errore: Database non connesso";
+            statusEl.style.color = "#ef4444";
+            return;
         }
+
+        const safe = email.replace(/\./g, ','); 
+        
+        // Timeout handling
+        const timeout = setTimeout(() => {
+            statusEl.textContent = "Tempo scaduto. Controlla la connessione.";
+            statusEl.style.color = "#f59e0b";
+        }, 8000);
+
+        db.ref("emailToUid/" + safe).once("value")
+            .then(snap => {
+                clearTimeout(timeout);
+                if (snap.exists()) { 
+                    statusEl.textContent = "Amico trovato! ✓"; statusEl.style.color = "#22c55e"; 
+                    if (selectedCardId && requestedCardId) { 
+                        sendBtn.disabled = false; sendBtn.style.opacity = "1"; 
+                    } 
+                } else { 
+                    statusEl.textContent = "Amico non registrato su questo gioco"; 
+                    statusEl.style.color = "#f59e0b"; 
+                    sendBtn.disabled = true; sendBtn.style.opacity = "0.5"; 
+                } 
+            })
+            .catch(e => {
+                console.error("Firebase Search Error:", e);
+                statusEl.textContent = "Errore durante la ricerca...";
+                statusEl.style.color = "#ef4444";
+                sendBtn.disabled = true;
+            });
     } 
  
     friendEmail.oninput = () => {
@@ -579,7 +629,13 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("Errore: Firebase non inizializzato.", "danger");
             return;
         }
-        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+        
+        // Su mobile (iOS/Android), signInWithPopup viene spesso bloccato.
+        // Usiamo un controllo per suggerire signInWithRedirect se necessario, 
+        // o informare l'utente di sbloccare i popup.
+        const provider = new firebase.auth.GoogleAuthProvider();
+        
+        auth.signInWithPopup(provider)
             .catch(err => {
                 console.error("Login Error:", err);
                 if (err.code === "auth/unauthorized-domain") {
