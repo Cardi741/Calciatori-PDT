@@ -702,6 +702,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             listenForPendingTrades();
+
+            // RECOVERY: Controlla se l'utente è già in una partita attiva
+            db.ref("games").orderByChild("timestamp").limitToLast(10).once("value", (snap) => {
+                const allGames = snap.val();
+                if (allGames) {
+                    Object.entries(allGames).forEach(([id, g]) => {
+                        if (g.status === "playing" && (g.p1.uid === u.uid || g.p2.uid === u.uid)) {
+                            startBattle(id, g.p1.uid === u.uid ? "p1" : "p2");
+                        }
+                    });
+                }
+            });
         } else {
             if (userDbListener && auth?.currentUser) {
                 db.ref("users/" + auth.currentUser.uid).off("value", userDbListener);
@@ -767,7 +779,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('forfeit-battle-btn').onclick = async () => {
         if (!currentGameSession) return;
         if (confirm("Vuoi davvero abbandonare la partita? Verrà contata come sconfitta.")) {
-            await db.ref(`games/${currentGameSession}`).update({ status: 'finished', lastLog: "Partita abbandonata." });
+            try {
+                await db.ref(`games/${currentGameSession}`).update({ 
+                    status: 'finished', 
+                    lastLog: "Partita abbandonata." 
+                });
+                // Forza reset locale se Firebase non risponde subito
+                setTimeout(() => { if (currentGameSession) location.reload(); }, 1000);
+            } catch (e) {
+                location.reload();
+            }
         }
     };
 
@@ -843,25 +864,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('join-battle-btn').onclick = async () => {
         if (!auth?.currentUser) { showToast("Accedi per combattere nell'Arena!", "danger"); return; }
+        
+        // Pulizia sessioni vecchie e Matchmaking vecchio (> 5 min)
+        const now = Date.now();
+        db.ref("games").orderByChild("timestamp").endAt(now - 1800000).once("value", s => {
+            s.forEach(gs => { if (gs.val().status === "playing") gs.ref.remove(); });
+        });
+        db.ref("matchmaking").orderByChild("timestamp").endAt(now - 300000).once("value", s => {
+            s.forEach(ms => ms.ref.remove());
+        });
+
         document.getElementById('matchmaking-status').classList.remove('hidden');
         document.getElementById('join-battle-btn').disabled = true;
 
         const mmRef = db.ref("matchmaking");
+        const myUid = auth.currentUser.uid;
+        mmRef.child(myUid).onDisconnect().remove();
+
         const queueSnap = await mmRef.once("value");
         const waiting = queueSnap.val();
 
-        if (waiting && Object.keys(waiting).length > 0) {
-            const oppId = Object.keys(waiting)[0];
-            const opponent = waiting[oppId];
-            if (oppId !== auth.currentUser.uid) {
-                const gameId = "game_" + Date.now();
+        if (waiting) {
+            const oppId = Object.keys(waiting).find(id => id !== myUid);
+            if (oppId) {
+                const opponent = waiting[oppId];
+                const gameId = "game_" + now;
                 const gameData = {
-                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 1, move: null },
-                    p2: { uid: auth.currentUser.uid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 1, move: null },
+                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 2, move: null },
+                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 2, move: null },
                     status: "playing",
                     turn: 1,
                     lastLog: "Battaglia Iniziata!",
-                    timestamp: Date.now()
+                    timestamp: now
                 };
                 await mmRef.child(oppId).remove();
                 await db.ref("games/" + gameId).set(gameData);
@@ -870,10 +904,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        await mmRef.child(auth.currentUser.uid).set({
+        await mmRef.child(myUid).set({
             email: auth.currentUser.email,
             team: currentBattleTeam,
-            timestamp: Date.now()
+            timestamp: now
         });
 
         const gameRef = db.ref("games");
@@ -898,12 +932,22 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('battle-overlay').classList.remove('hidden');
         document.getElementById('matchmaking-status').classList.add('hidden');
         
+        // Pulizia automatica se usciamo durante il gioco
+        db.ref(`games/${gameId}`).onDisconnect().update({
+            status: 'finished',
+            lastLog: "Un giocatore si è disconnesso."
+        });
+
         db.ref("games/" + gameId).on("value", (snap) => {
             const game = snap.val();
             if (!game) return;
             battleState = game;
             updateBattleUI(role);
-            if (game.p1.move && game.p2.move) {
+            
+            // Entrambi hanno mosso? Risolvi il turno.
+            // Usiamo un controllo sul turno per evitare doppie risoluzioni
+            if (game.p1.move && game.p2.move && game.status === 'playing') {
+                // Solo un giocatore (p1) o chi arriva per primo tenta la risoluzione atomica
                 if (role === 'p1') resolveTurn(gameId);
             }
         });
