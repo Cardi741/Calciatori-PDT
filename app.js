@@ -1,95 +1,101 @@
 const CARDS = [
-    // MYTHIC (5 base + 2 specials)
-    { id: 1, name: "Ruslan Danchivsky (GOAT)", rarity: "Mythic", value: 10000, color: "#ef4444" },
-    { id: 2, name: "Gioele Perroni", rarity: "Mythic", value: 9000, color: "#ef4444" },
-    { id: 3, name: "Alessandro Sgattoni", rarity: "Mythic", value: 9000, color: "#ef4444" },
-    { id: 4, name: "Marco P (ICON)", rarity: "Mythic", value: 12000, color: "#ef4444" },
-    { id: 5, name: "Leo AZ (ICON)", rarity: "Mythic", value: 12000, color: "#ef4444" },
-    { id: 6, name: "Lorenzo El mas grande (DUSAN)", rarity: "Mythic", value: 15000, color: "#ef4444" },
-    { id: 7, name: "Riccoh Giuatozzi (Prime moments)", rarity: "Mythic", value: 14000, color: "#ef4444" },
+    // MYTHIC
+    { id: 1, name: "Ruslan Danchivsky (GOAT)", rarity: "Mythic", value: 10000, color: "#ef4444", role: "attacco", tags: ["fuoco"], ability: "boost" },
+    { id: 2, name: "Gioele Perroni", rarity: "Mythic", value: 9000, color: "#ef4444", role: "attacco", tags: ["natura"], ability: "double" },
+    { id: 3, name: "Alessandro Sgattoni", rarity: "Mythic", value: 9000, color: "#ef4444", role: "difesa", tags: ["acqua"], ability: "shield" },
+    { id: 4, name: "Marco P (ICON)", rarity: "Mythic", value: 12000, color: "#ef4444", role: "controllo", tags: ["oscuro"], ability: "block" },
+    { id: 5, name: "Leo AZ (ICON)", rarity: "Mythic", value: 12000, color: "#ef4444", role: "supporto", tags: ["sacro"], ability: "drain" },
+    { id: 6, name: "Lorenzo El mas grande (DUSAN)", rarity: "Mythic", value: 15000, color: "#ef4444", role: "attacco", tags: ["fuoco", "oscura"], ability: "double" },
+    { id: 7, name: "Riccoh Giuatozzi (Prime moments)", rarity: "Mythic", value: 14000, color: "#ef4444", role: "controllo", tags: ["luce"], ability: "copy" },
+    { id: 85, name: "Pippo Gol (Speciale)", rarity: "Mythic", value: 20000, color: "#ef4444", role: "attacco", tags: ["fuoco", "luce"], ability: "boost" },
 
-    // LEGGENDARI (11 base + 2 specials)
-    { id: 8, name: "Alessandro Pieralisi", rarity: "Legendary", value: 3000, color: "#f59e0b" },
-    { id: 9, name: "Godsent Okihmane", rarity: "Legendary", value: 3000, color: "#f59e0b" },
-    { id: 10, name: "Antoh Bellesi", rarity: "Legendary", value: 3000, color: "#f59e0b" },
-    { id: 11, name: "Matte Cardi", rarity: "Legendary", value: 3000, color: "#f59e0b" },
-    { id: 12, name: "Aura Jacket", rarity: "Legendary", value: 3000, color: "#f59e0b" },
-    { id: 13, name: "Michele Bellesi (ICON)", rarity: "Legendary", value: 5000, color: "#f59e0b" },
-    { id: 14, name: "Don Oscar", rarity: "Legendary", value: 3000, color: "#f59e0b" },
-    { id: 15, name: "Amadou (portiere)", rarity: "Legendary", value: 3000, color: "#f59e0b" },
-    { id: 16, name: "Ciuchino Sperico", rarity: "Legendary", value: 3000, color: "#f59e0b" },
-    { id: 17, name: "Farell Ladjnou", rarity: "Legendary", value: 3000, color: "#f59e0b" },
-    { id: 18, name: "Andrea Giuatozzi", rarity: "Legendary", value: 3000, color: "#f59e0b" },
-    { id: 19, name: "Harry Pacchiani (al Francoforte)", rarity: "Legendary", value: 4500, color: "#f59e0b" },
-    { id: 20, name: "Ruslan Danchivsky (Winter)", rarity: "Legendary", value: 4000, color: "#f59e0b" },
+    // LEGGENDARI
+    { id: 8, name: "Alessandro Pieralisi", rarity: "Legendary", value: 3000, color: "#f59e0b", role: "difesa", tags: ["natura"], ability: "shield" },
+    { id: 9, name: "Godsent Okihmane", rarity: "Legendary", value: 3000, color: "#f59e0b", role: "supporto", tags: ["acqua"], ability: "drain" },
+    { id: 10, name: "Antoh Bellesi", rarity: "Legendary", value: 3000, color: "#f59e0b", role: "controllo", tags: ["oscuro"], ability: "block" },
+    { id: 11, name: "Matte Cardi", rarity: "Legendary", value: 3000, color: "#f59e0b", role: "attacco", tags: ["fuoco"], ability: "boost" },
+    { id: 12, name: "Aura Jacket", rarity: "Legendary", value: 3000, color: "#f59e0b", role: "difesa", tags: ["luce"], ability: "shield" },
+    { id: 13, name: "Michele Bellesi (ICON)", rarity: "Legendary", value: 5000, color: "#f59e0b", role: "controllo", tags: ["oscuro"], ability: "copy" },
+    { id: 14, name: "Don Oscar", rarity: "Legendary", value: 3000, color: "#f59e0b", role: "supporto", tags: ["sacro"], ability: "drain" },
+    { id: 15, name: "Amadou (portiere)", rarity: "Legendary", value: 3000, color: "#f59e0b", role: "difesa", tags: ["acqua"], ability: "block" },
+    { id: 16, name: "Ciuchino Sperico", rarity: "Legendary", value: 3000, color: "#f59e0b", role: "attacco", tags: ["natura"], ability: "double" },
+    { id: 17, name: "Farell Ladjnou", rarity: "Legendary", value: 3000, color: "#f59e0b", role: "attacco", tags: ["fuoco"], ability: "boost" },
+    { id: 18, name: "Andrea Giuatozzi", rarity: "Legendary", value: 3000, color: "#f59e0b", role: "difesa", tags: ["natura"], ability: "shield" },
+    { id: 19, name: "Harry Pacchiani (al Francoforte)", rarity: "Legendary", value: 4500, color: "#f59e0b", role: "attacco", tags: ["acqua"], ability: "double" },
+    { id: 20, name: "Ruslan Danchivsky (Winter)", rarity: "Legendary", value: 4000, color: "#f59e0b", role: "supporto", tags: ["ghiaccio", "acqua"], ability: "drain" },
+    { id: 82, name: "Francesco Politi (Speciale)", rarity: "Legendary", value: 8000, color: "#f59e0b", role: "controllo", tags: ["luce", "macchina"], ability: "copy" },
 
-    // EPICI (11 base + 3 specials)
-    { id: 21, name: "Tommaso Saltari", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 22, name: "Lorenzo El mas grande", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 23, name: "Antoh (il napoletano)", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 24, name: "Stewie", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 25, name: "Brownie Cardinali", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 26, name: "Leo Cardi", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 27, name: "Christian Forà", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 28, name: "Amadou (attaccante)", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 29, name: "Riccaz Official", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 30, name: "Simone Fadi", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 31, name: "Riccoh Giuatozzi", rarity: "Epic", value: 800, color: "#a855f7" },
-    { id: 32, name: "Paolo Pacchiani🪚", rarity: "Epic", value: 1200, color: "#a855f7" },
-    { id: 33, name: "Lorenzo (Special)", rarity: "Epic", value: 1000, color: "#a855f7" },
-    { id: 34, name: "Antoh (Special)", rarity: "Epic", value: 1000, color: "#a855f7" },
+    // EPICI
+    { id: 21, name: "Tommaso Saltari", rarity: "Epic", value: 800, color: "#a855f7", role: "attacco", tags: ["natura"], ability: "boost" },
+    { id: 22, name: "Lorenzo El mas grande", rarity: "Epic", value: 800, color: "#a855f7", role: "difesa", tags: ["oscuro"], ability: "shield" },
+    { id: 23, name: "Antoh (il napoletano)", rarity: "Epic", value: 800, color: "#a855f7", role: "supporto", tags: ["fuoco"], ability: "drain" },
+    { id: 24, name: "Stewie", rarity: "Epic", value: 800, color: "#a855f7", role: "controllo", tags: ["acqua"], ability: "block" },
+    { id: 25, name: "Brownie Cardinali", rarity: "Epic", value: 800, color: "#a855f7", role: "attacco", tags: ["natura"], ability: "double" },
+    { id: 26, name: "Leo Cardi", rarity: "Epic", value: 800, color: "#a855f7", role: "difesa", tags: ["luce"], ability: "shield" },
+    { id: 27, name: "Christian Forà", rarity: "Epic", value: 800, color: "#a855f7", role: "supporto", tags: ["oscuro"], ability: "drain" },
+    { id: 28, name: "Amadou (attaccante)", rarity: "Epic", value: 800, color: "#a855f7", role: "attacco", tags: ["fuoco"], ability: "boost" },
+    { id: 29, name: "Riccaz Official", rarity: "Epic", value: 800, color: "#a855f7", role: "controllo", tags: ["acqua"], ability: "copy" },
+    { id: 30, name: "Simone Fadi", rarity: "Epic", value: 800, color: "#a855f7", role: "difesa", tags: ["natura"], ability: "block" },
+    { id: 31, name: "Riccoh Giuatozzi", rarity: "Epic", value: 800, color: "#a855f7", role: "supporto", tags: ["luce"], ability: "drain" },
+    { id: 32, name: "Paolo Pacchiani🪚", rarity: "Epic", value: 1200, color: "#a855f7", role: "attacco", tags: ["oscuro", "metallo"], ability: "double" },
+    { id: 33, name: "Lorenzo (Special)", rarity: "Epic", value: 1000, color: "#a855f7", role: "difesa", tags: ["fuoco"], ability: "shield" },
+    { id: 34, name: "Antoh (Special)", rarity: "Epic", value: 1000, color: "#a855f7", role: "supporto", tags: ["acqua"], ability: "drain" },
+    { id: 86, name: "Mahel", rarity: "Epic", value: 1500, color: "#a855f7", role: "controllo", tags: ["natura", "luce"], ability: "copy" },
 
-    // RARI (9 base + 5 specials)
-    { id: 35, name: "Simone Tomassini", rarity: "Rare", value: 200, color: "#3b82f6" },
-    { id: 36, name: "Giovanni Piacentini", rarity: "Rare", value: 200, color: "#3b82f6" },
-    { id: 37, name: "Marco B", rarity: "Rare", value: 200, color: "#3b82f6" },
-    { id: 38, name: "Tonali Barbaresi", rarity: "Rare", value: 200, color: "#3b82f6" },
-    { id: 39, name: "Amedeo Dezi", rarity: "Rare", value: 200, color: "#3b82f6" },
-    { id: 40, name: "Valè Trasatti", rarity: "Rare", value: 200, color: "#3b82f6" },
-    { id: 41, name: "Er giaigiax", rarity: "Rare", value: 200, color: "#3b82f6" },
-    { id: 42, name: "Marcolino Giaguaroù", rarity: "Rare", value: 200, color: "#3b82f6" },
-    { id: 43, name: "Harry Pacchiani", rarity: "Rare", value: 200, color: "#3b82f6" },
-    { id: 44, name: "Marco B (Special)", rarity: "Rare", value: 350, color: "#3b82f6" },
-    { id: 45, name: "Simone Tomassini (Special)", rarity: "Rare", value: 350, color: "#3b82f6" },
-    { id: 46, name: "Tonali Barbaresi (Special)", rarity: "Rare", value: 350, color: "#3b82f6" },
-    { id: 47, name: "Amedeo Dezi (Special)", rarity: "Rare", value: 350, color: "#3b82f6" },
-    { id: 48, name: "El lecc (Special)", rarity: "Rare", value: 350, color: "#3b82f6" },
+    // RARI
+    { id: 35, name: "Simone Tomassini", rarity: "Rare", value: 200, color: "#3b82f6", role: "attacco", tags: ["fuoco"], ability: "boost" },
+    { id: 36, name: "Giovanni Piacentini", rarity: "Rare", value: 200, color: "#3b82f6", role: "difesa", tags: ["acqua"], ability: "shield" },
+    { id: 37, name: "Marco B", rarity: "Rare", value: 200, color: "#3b82f6", role: "supporto", tags: ["natura"], ability: "drain" },
+    { id: 38, name: "Tonali Barbaresi", rarity: "Rare", value: 200, color: "#3b82f6", role: "controllo", tags: ["oscuro"], ability: "block" },
+    { id: 39, name: "Amedeo Dezi", rarity: "Rare", value: 200, color: "#3b82f6", role: "attacco", tags: ["luce"], ability: "double" },
+    { id: 40, name: "Valè Trasatti", rarity: "Rare", value: 200, color: "#3b82f6", role: "difesa", tags: ["fuoco"], ability: "shield" },
+    { id: 41, name: "Er giaigiax", rarity: "Rare", value: 200, color: "#3b82f6", role: "supporto", tags: ["acqua"], ability: "drain" },
+    { id: 42, name: "Marcolino Giaguaroù", rarity: "Rare", value: 200, color: "#3b82f6", role: "controllo", tags: ["natura"], ability: "copy" },
+    { id: 43, name: "Harry Pacchiani", rarity: "Rare", value: 200, color: "#3b82f6", role: "attacco", tags: ["oscuro"], ability: "boost" },
+    { id: 44, name: "Marco B (Special)", rarity: "Rare", value: 350, color: "#3b82f6", role: "difesa", tags: ["luce"], ability: "shield" },
+    { id: 45, name: "Simone Tomassini (Special)", rarity: "Rare", value: 350, color: "#3b82f6", role: "supporto", tags: ["fuoco"], ability: "drain" },
+    { id: 46, name: "Tonali Barbaresi (Special)", rarity: "Rare", value: 350, color: "#3b82f6", role: "controllo", tags: ["acqua"], ability: "block" },
+    { id: 47, name: "Amedeo Dezi (Special)", rarity: "Rare", value: 350, color: "#3b82f6", role: "attacco", tags: ["natura"], ability: "double" },
+    { id: 48, name: "El lecc (Special)", rarity: "Rare", value: 350, color: "#3b82f6", role: "difesa", tags: ["oscuro"], ability: "shield" },
+    { id: 83, name: "Enri'", rarity: "Rare", value: 400, color: "#3b82f6", role: "supporto", tags: ["fuoco", "natura"], ability: "drain" },
 
-    // COMUNI (9 base + 1 special)
-    { id: 49, name: "Rodolfo Dezi", rarity: "Common", value: 50, color: "#64748b" },
-    { id: 50, name: "Marco Foggiano", rarity: "Common", value: 50, color: "#64748b" },
-    { id: 51, name: "El lecc", rarity: "Common", value: 50, color: "#64748b" },
-    { id: 52, name: "Bye", rarity: "Common", value: 50, color: "#64748b" },
-    { id: 53, name: "Share", rarity: "Common", value: 50, color: "#64748b" },
-    { id: 54, name: "Paolo Pacchiani", rarity: "Common", value: 50, color: "#64748b" },
-    { id: 55, name: "Christian Pastori", rarity: "Common", value: 50, color: "#64748b" },
-    { id: 56, name: "Don kriztof", rarity: "Common", value: 50, color: "#64748b" },
-    { id: 57, name: "Rayan", rarity: "Common", value: 50, color: "#64748b" },
-    { id: 58, name: "Rodolfo Dezi (Special)", rarity: "Common", value: 100, color: "#64748b" },
+    // COMUNI
+    { id: 49, name: "Rodolfo Dezi", rarity: "Common", value: 50, color: "#64748b", role: "attacco", tags: ["natura"], ability: "boost" },
+    { id: 50, name: "Marco Foggiano", rarity: "Common", value: 50, color: "#64748b", role: "difesa", tags: ["fuoco"], ability: "shield" },
+    { id: 51, name: "El lecc", rarity: "Common", value: 50, color: "#64748b", role: "supporto", tags: ["acqua"], ability: "drain" },
+    { id: 52, name: "Bye", rarity: "Common", value: 50, color: "#64748b", role: "controllo", tags: ["oscuro"], ability: "block" },
+    { id: 53, name: "Share", rarity: "Common", value: 50, color: "#64748b", role: "attacco", tags: ["luce"], ability: "double" },
+    { id: 54, name: "Paolo Pacchiani", rarity: "Common", value: 50, color: "#64748b", role: "difesa", tags: ["natura"], ability: "shield" },
+    { id: 55, name: "Christian Pastori", rarity: "Common", value: 50, color: "#64748b", role: "supporto", tags: ["fuoco"], ability: "drain" },
+    { id: 56, name: "Don kriztof", rarity: "Common", value: 50, color: "#64748b", role: "controllo", tags: ["acqua"], ability: "copy" },
+    { id: 57, name: "Rayan", rarity: "Common", value: 50, color: "#64748b", role: "attacco", tags: ["oscuro"], ability: "boost" },
+    { id: 58, name: "Rodolfo Dezi (Special)", rarity: "Common", value: 100, color: "#64748b", role: "difesa", tags: ["luce"], ability: "shield" },
+    { id: 81, name: "Uomo Ciao", rarity: "Common", value: 60, color: "#64748b", role: "supporto", tags: ["natura"], ability: "drain" },
+    { id: 84, name: "Sandro Montenovo", rarity: "Common", value: 60, color: "#64748b", role: "controllo", tags: ["acqua"], ability: "block" },
 
-    // EXTRA per arrivare a 75+ (Icons, Variations, etc.)
-    { id: 59, name: "Tommaso Saltari (ICON)", rarity: "Legendary", value: 3500, color: "#f59e0b" },
-    { id: 60, name: "Simone Fadi (ICON)", rarity: "Legendary", value: 3500, color: "#f59e0b" },
-    { id: 61, name: "Gioele Perroni (Winter)", rarity: "Mythic", value: 11000, color: "#ef4444" },
-    { id: 62, name: "Alessandro Sgattoni (Winter)", rarity: "Mythic", value: 11000, color: "#ef4444" },
-    { id: 63, name: "Michele Bellesi (Prime)", rarity: "Mythic", value: 13000, color: "#ef4444" },
-    { id: 64, name: "Matte Cardi (ICON)", rarity: "Legendary", value: 3200, color: "#f59e0b" },
-    { id: 65, name: "Andrea Giuatozzi (ICON)", rarity: "Legendary", value: 3200, color: "#f59e0b" },
-    { id: 66, name: "Stewie (Golden)", rarity: "Epic", value: 1500, color: "#a855f7" },
-    { id: 67, name: "Brownie (Elite)", rarity: "Epic", value: 1400, color: "#a855f7" },
-    { id: 68, name: "Leo Cardi (Hero)", rarity: "Epic", value: 1600, color: "#a855f7" },
-    { id: 69, name: "Riccaz (Star)", rarity: "Epic", value: 1300, color: "#a855f7" },
-    { id: 70, name: "Giovanni (Clutch)", rarity: "Rare", value: 400, color: "#3b82f6" },
-    { id: 71, name: "Valè (Shield)", rarity: "Rare", value: 380, color: "#3b82f6" },
-    { id: 72, name: "Er giaigiax (Biker)", rarity: "Rare", value: 420, color: "#3b82f6" },
-    { id: 73, name: "Marcolino (Speedy)", rarity: "Rare", value: 390, color: "#3b82f6" },
-    { id: 74, name: "Marco Foggiano (Old School)", rarity: "Common", value: 120, color: "#64748b" },
-    { id: 75, name: "Bye (Ghost)", rarity: "Common", value: 110, color: "#64748b" },
-    { id: 76, name: "Share (Link)", rarity: "Common", value: 115, color: "#64748b" },
-    { id: 77, name: "Christian Pastori (Young)", rarity: "Common", value: 105, color: "#64748b" },
-    { id: 78, name: "Don kriztof (Saint)", rarity: "Common", value: 130, color: "#64748b" },
-    { id: 79, name: "Rayan (Ace)", rarity: "Common", value: 125, color: "#64748b" },
-    { id: 80, name: "Aura Jacket (Neon)", rarity: "Legendary", value: 3800, color: "#f59e0b" }
+    // EXTRA
+    { id: 59, name: "Tommaso Saltari (ICON)", rarity: "Legendary", value: 3500, color: "#f59e0b", role: "attacco", tags: ["fuoco"], ability: "double" },
+    { id: 60, name: "Simone Fadi (ICON)", rarity: "Legendary", value: 3500, color: "#f59e0b", role: "difesa", tags: ["luce"], ability: "shield" },
+    { id: 61, name: "Gioele Perroni (Winter)", rarity: "Mythic", value: 11000, color: "#ef4444", role: "attacco", tags: ["ghiaccio", "natura"], ability: "boost" },
+    { id: 62, name: "Alessandro Sgattoni (Winter)", rarity: "Mythic", value: 11000, color: "#ef4444", role: "difesa", tags: ["ghiaccio", "acqua"], ability: "shield" },
+    { id: 63, name: "Michele Bellesi (Prime)", rarity: "Mythic", value: 13000, color: "#ef4444", role: "controllo", tags: ["luce", "oscuro"], ability: "block" },
+    { id: 64, name: "Matte Cardi (ICON)", rarity: "Legendary", value: 3200, color: "#f59e0b", role: "supporto", tags: ["sacro", "fuoco"], ability: "drain" },
+    { id: 65, name: "Andrea Giuatozzi (ICON)", rarity: "Legendary", value: 3200, color: "#f59e0b", role: "difesa", tags: ["metallo", "natura"], ability: "block" },
+    { id: 66, name: "Stewie (Golden)", rarity: "Epic", value: 1500, color: "#a855f7", role: "attacco", tags: ["luce", "oro"], ability: "double" },
+    { id: 67, name: "Brownie (Elite)", rarity: "Epic", value: 1400, color: "#a855f7", role: "attacco", tags: ["fuoco", "veleno"], ability: "boost" },
+    { id: 68, name: "Leo Cardi (Hero)", rarity: "Epic", value: 1600, color: "#a855f7", role: "difesa", tags: ["luce", "sacro"], ability: "shield" },
+    { id: 69, name: "Riccaz (Star)", rarity: "Epic", value: 1300, color: "#a855f7", role: "controllo", tags: ["oscuro", "spazio"], ability: "copy" },
+    { id: 70, name: "Giovanni (Clutch)", rarity: "Rare", value: 400, color: "#3b82f6", role: "attacco", tags: ["acqua", "vento"], ability: "boost" },
+    { id: 71, name: "Valè (Shield)", rarity: "Rare", value: 380, color: "#3b82f6", role: "difesa", tags: ["metallo", "fuoco"], ability: "shield" },
+    { id: 72, name: "Er giaigiax (Biker)", rarity: "Rare", value: 420, color: "#3b82f6", role: "supporto", tags: ["macchina", "terra"], ability: "drain" },
+    { id: 73, name: "Marcolino (Speedy)", rarity: "Rare", value: 390, color: "#3b82f6", role: "attacco", tags: ["vento", "fulmine"], ability: "double" },
+    { id: 74, name: "Marco Foggiano (Old School)", rarity: "Common", value: 120, color: "#64748b", role: "difesa", tags: ["terra", "natura"], ability: "block" },
+    { id: 75, name: "Bye (Ghost)", rarity: "Common", value: 110, color: "#64748b", role: "controllo", tags: ["fantasma", "oscuro"], ability: "copy" },
+    { id: 76, name: "Share (Link)", rarity: "Common", value: 115, color: "#64748b", role: "supporto", tags: ["luce", "elettrico"], ability: "drain" },
+    { id: 77, name: "Christian Pastori (Young)", rarity: "Common", value: 105, color: "#64748b", role: "attacco", tags: ["natura", "vento"], ability: "boost" },
+    { id: 78, name: "Don kriztof (Saint)", rarity: "Common", value: 130, color: "#64748b", role: "supporto", tags: ["sacro", "luce"], ability: "drain" },
+    { id: 79, name: "Rayan (Ace)", rarity: "Common", value: 125, color: "#64748b", role: "attacco", tags: ["aria", "fuoco"], ability: "double" },
+    { id: 80, name: "Aura Jacket (Neon)", rarity: "Legendary", value: 3800, color: "#f59e0b", role: "controllo", tags: ["luce", "energia"], ability: "block" }
 ]; 
  
 const firebaseConfig = { 
@@ -119,6 +125,9 @@ const PACK_TYPES = {
 let users = { "Default": { credits: INITIAL_CREDITS, collection: {}, lastDailyBonus: 0 } }; 
 let currentUser = "Default"; let showMissing = false; 
 let selectedCardId = null; let requestedCardId = null;
+let currentBattleTeam = [];
+let currentGameSession = null;
+let battleState = null;
  
 async function loadState() { 
     const saved = localStorage.getItem('tcg_users'); 
@@ -243,14 +252,36 @@ document.addEventListener('DOMContentLoaded', () => {
     } 
  
     function renderCard(card, qty = null, missing = false) { 
+        const isElite = (qty >= 1000);
+        const displayQty = isElite ? (qty - 1000) : qty;
+
         const div = document.createElement('div'); 
-        div.className = `card rarity-${card.rarity.toLowerCase()} ${missing?'missing':''} ${qty>1?'duplicate':''}`; 
+        div.className = `card rarity-${card.rarity.toLowerCase()} ${missing?'missing':''} ${displayQty>1?'duplicate':''} ${isElite?'elite':''}`; 
         div.style.borderColor = card.color; 
-        div.innerHTML = `<div class="rarity" style="color:${card.color}">${card.rarity}</div><h4>${card.name}</h4><div class="value">Valore: ${card.value}</div>`; 
-        if (qty !== null) div.innerHTML += `<div class="quantity">x${qty}</div>`; 
-        if (qty > 1) { 
+        div.innerHTML = `<div class="rarity" style="color:${card.color}">${isElite?'ELITE ':''}${card.rarity}</div><h4>${card.name}</h4><div class="value">Valore: ${card.value}</div>`; 
+        
+        if (isElite) {
+            div.style.boxShadow = `0 0 20px ${card.color}`;
+            div.style.borderWidth = "4px";
+        }
+
+        if (qty !== null) div.innerHTML += `<div class="quantity">x${displayQty}</div>`; 
+        
+        if (displayQty >= 3 && !isElite) {
+            const fbtn = document.createElement('button'); fbtn.className = 'buy-btn'; fbtn.style.marginBottom = "5px"; fbtn.textContent = "FONDI (3x)";
+            fbtn.onclick = (e) => { e.stopPropagation(); users[currentUser].collection[card.id] = 1001; showToast("FUSIONE! Carta potenziata in ELITE", "success"); saveState(); updateUI(); };
+            div.appendChild(fbtn);
+        }
+
+        if (displayQty > 1 || (isElite && displayQty > 1)) { 
             const btn = document.createElement('button'); btn.className = 'sell-btn'; btn.textContent = `Svincola (${Math.floor(card.value*0.2)})`; 
-            btn.onclick = (e) => { e.stopPropagation(); users[currentUser].collection[card.id]--; users[currentUser].credits += Math.floor(card.value*0.2); showToast(`Carta venduta per ${Math.floor(card.value*0.2)} crediti!`); saveState(); updateUI(); }; 
+            btn.onclick = (e) => { 
+                e.stopPropagation(); 
+                users[currentUser].collection[card.id]--; 
+                users[currentUser].credits += Math.floor(card.value*0.2); 
+                showToast(`Carta venduta per ${Math.floor(card.value*0.2)} crediti!`); 
+                saveState(); updateUI(); 
+            }; 
             div.appendChild(btn); 
         } 
         div.onclick = () => { zoomContainer.innerHTML = ''; const zc = div.cloneNode(true); zc.querySelector('.sell-btn')?.remove(); zoomContainer.appendChild(zc); zoomOverlay.classList.remove('hidden'); }; 
@@ -721,14 +752,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Navigation listeners
-    const sections = ['shop-view', 'collection-view', 'trade-view', 'mercato-view'];
+    const sections = ['shop-view', 'collection-view', 'trade-view', 'mercato-view', 'arena-view'];
     const showView = (id) => {
         sections.forEach(s => document.getElementById(s).classList.add('hidden'));
         document.getElementById(id).classList.remove('hidden');
+        if (id === 'arena-view') renderArenaLobby();
     };
 
     document.getElementById('show-shop').onclick = () => showView('shop-view'); 
     document.getElementById('show-collection').onclick = () => showView('collection-view'); 
+    document.getElementById('show-arena').onclick = () => showView('arena-view');
     document.getElementById('show-trade').onclick = () => showView('trade-view'); 
 
     // Trade tab switching
@@ -749,6 +782,306 @@ document.addEventListener('DOMContentLoaded', () => {
     zoomOverlay.onclick = () => zoomOverlay.classList.add('hidden'); 
     document.getElementById('toggle-missing').onchange = (e) => { showMissing = e.target.checked; renderCollection(); }; 
  
+    function renderArenaLobby() {
+        const teamSelector = document.getElementById('battle-team-selector');
+        teamSelector.innerHTML = '';
+        currentBattleTeam.forEach(id => {
+            const card = CARDS.find(c => c.id == id);
+            const el = renderCard(card);
+            el.onclick = () => {
+                currentBattleTeam = currentBattleTeam.filter(tid => tid != id);
+                renderArenaLobby();
+            };
+            teamSelector.appendChild(el);
+        });
+
+        const picker = document.getElementById('team-picker-grid');
+        picker.innerHTML = '';
+        const user = users[currentUser];
+        Object.keys(user.collection).forEach(id => {
+            if (user.collection[id] > 0) {
+                const card = CARDS.find(c => c.id == id);
+                const el = renderCard(card, user.collection[id]);
+                el.onclick = () => {
+                    if (currentBattleTeam.length < 5 && !currentBattleTeam.includes(parseInt(id))) {
+                        // Bilanciamento: max 2 carte Leggendarie/Mitiche
+                        const highRarityCount = currentBattleTeam.filter(tid => {
+                            const c = CARDS.find(x => x.id == tid);
+                            return c.rarity === "Legendary" || c.rarity === "Mythic";
+                        }).length;
+
+                        if ((card.rarity === "Legendary" || card.rarity === "Mythic") && highRarityCount >= 2) {
+                            showToast("Max 2 carte Leggendarie/Mitiche per team!", "danger");
+                            return;
+                        }
+
+                        currentBattleTeam.push(parseInt(id));
+                        renderArenaLobby();
+                    }
+                };
+                picker.appendChild(el);
+            }
+        });
+
+        document.getElementById('join-battle-btn').disabled = currentBattleTeam.length < 5;
+    }
+
+    document.getElementById('auto-team-btn').onclick = () => {
+        const user = users[currentUser];
+        const available = Object.keys(user.collection).filter(id => user.collection[id] > 0);
+        available.sort((a, b) => (CARDS.find(c => c.id == b).value) - (CARDS.find(c => c.id == a).value));
+        currentBattleTeam = available.slice(0, 5).map(id => parseInt(id));
+        renderArenaLobby();
+    };
+
+    document.getElementById('join-battle-btn').onclick = async () => {
+        if (!auth?.currentUser) { showToast("Accedi per combattere nell'Arena!", "danger"); return; }
+        document.getElementById('matchmaking-status').classList.remove('hidden');
+        document.getElementById('join-battle-btn').disabled = true;
+
+        const mmRef = db.ref("matchmaking");
+        const queueSnap = await mmRef.once("value");
+        const waiting = queueSnap.val();
+
+        if (waiting && Object.keys(waiting).length > 0) {
+            const oppId = Object.keys(waiting)[0];
+            const opponent = waiting[oppId];
+            if (oppId !== auth.currentUser.uid) {
+                const gameId = "game_" + Date.now();
+                const gameData = {
+                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 1, move: null },
+                    p2: { uid: auth.currentUser.uid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 1, move: null },
+                    status: "playing",
+                    turn: 1,
+                    lastLog: "Battaglia Iniziata!",
+                    timestamp: Date.now()
+                };
+                await mmRef.child(oppId).remove();
+                await db.ref("games/" + gameId).set(gameData);
+                startBattle(gameId, "p2");
+                return;
+            }
+        }
+
+        await mmRef.child(auth.currentUser.uid).set({
+            email: auth.currentUser.email,
+            team: currentBattleTeam,
+            timestamp: Date.now()
+        });
+
+        const gameRef = db.ref("games");
+        gameRef.on("child_added", (snap) => {
+            const game = snap.val();
+            if (game.p1.uid === auth.currentUser.uid && game.status === "playing") {
+                gameRef.off("child_added");
+                startBattle(snap.key, "p1");
+            }
+        });
+    };
+
+    document.getElementById('cancel-matchmaking').onclick = async () => {
+        await db.ref("matchmaking/" + auth.currentUser.uid).remove();
+        document.getElementById('matchmaking-status').classList.add('hidden');
+        document.getElementById('join-battle-btn').disabled = false;
+    };
+
+    function startBattle(gameId, role) {
+        currentGameSession = gameId;
+        document.getElementById('arena-lobby').classList.add('hidden');
+        document.getElementById('battle-overlay').classList.remove('hidden');
+        document.getElementById('matchmaking-status').classList.add('hidden');
+        
+        db.ref("games/" + gameId).on("value", (snap) => {
+            const game = snap.val();
+            if (!game) return;
+            battleState = game;
+            updateBattleUI(role);
+            if (game.p1.move && game.p2.move) {
+                if (role === 'p1') resolveTurn(gameId);
+            }
+        });
+    }
+
+    function updateBattleUI(myRole) {
+        const me = battleState[myRole];
+        const opp = battleState[myRole === 'p1' ? 'p2' : 'p1'];
+        const user = users[currentUser];
+
+        document.getElementById('player-name').textContent = me.email.split('@')[0];
+        document.getElementById('opp-name').textContent = opp.email.split('@')[0];
+        
+        document.getElementById('player-hp-text').textContent = `${me.hp}/20 HP`;
+        document.getElementById('player-hp-bar').style.width = (me.hp / 20 * 100) + "%";
+        
+        document.getElementById('opp-hp-text').textContent = `${opp.hp}/20 HP`;
+        document.getElementById('opp-hp-bar').style.width = (opp.hp / 20 * 100) + "%";
+
+        renderEnergy('player-energy', me.energy);
+        renderEnergy('opp-energy', opp.energy);
+
+        document.getElementById('turn-counter').textContent = `TURNO ${battleState.turn}/10`;
+        document.getElementById('battle-log').textContent = battleState.lastLog;
+
+        const hand = document.getElementById('player-hand');
+        hand.innerHTML = '';
+        me.team.forEach(cardId => {
+            const card = CARDS.find(c => c.id == cardId);
+            const el = renderCard(card);
+            const cost = getCardCost(card);
+            el.innerHTML += `<div style="margin-top:5px; font-weight:bold; color:#3b82f6">Cost: ${cost}⚡</div>`;
+            
+            if (me.energy >= cost && !me.move) {
+                el.onclick = () => {
+                    const isElite = (user.collection[cardId] >= 1000); // Convenzione interna per Elite
+                    db.ref(`games/${currentGameSession}/${myRole}/move`).set(cardId);
+                    db.ref(`games/${currentGameSession}/${myRole}/moveElite`).set(isElite);
+                };
+            } else {
+                el.style.opacity = "0.5";
+                el.style.cursor = "not-allowed";
+            }
+            hand.appendChild(el);
+        });
+
+        if (me.move) {
+            const card = CARDS.find(c => c.id == me.move);
+            document.getElementById('player-played-card').innerHTML = '';
+            document.getElementById('player-played-card').appendChild(renderCard(card));
+        } else {
+            document.getElementById('player-played-card').innerHTML = 'Scegli una carta...';
+        }
+
+        if (opp.move) {
+            document.getElementById('opp-played-card').innerHTML = '<div class="card" style="height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05);"><h4>CARTA PRONTA</h4></div>';
+        } else {
+            document.getElementById('opp-played-card').innerHTML = 'In attesa...';
+        }
+
+        if (battleState.status === "finished") {
+            db.ref("games/" + currentGameSession).off();
+            setTimeout(() => {
+                alert("Battaglia Conclusa: " + battleState.lastLog);
+                location.reload();
+            }, 2000);
+        }
+    }
+
+    function renderEnergy(id, count) {
+        const cont = document.getElementById(id);
+        cont.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+            const pip = document.createElement('div');
+            pip.className = `energy-pip ${i < count ? 'active' : ''}`;
+            cont.appendChild(pip);
+        }
+    }
+
+    function getCardCost(card) {
+        const costs = { Common: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5 };
+        return costs[card.rarity];
+    }
+
+    async function resolveTurn(gameId) {
+        const gameRef = db.ref("games/" + gameId);
+        const snap = await gameRef.once("value");
+        const g = snap.val();
+        
+        const c1 = CARDS.find(c => c.id == g.p1.move);
+        const c2 = CARDS.find(c => c.id == g.p2.move);
+
+        // Step 0: Check Elite Status (from move data)
+        const isE1 = g.p1.moveElite || false;
+        const isE2 = g.p2.moveElite || false;
+
+        // Step 1: Base Force
+        let f1 = { Common:1, Rare:2, Epic:3, Legendary:4, Mythic:5 }[c1.rarity] + (isE1 ? 1 : 0);
+        let f2 = { Common:1, Rare:2, Epic:3, Legendary:4, Mythic:5 }[c2.rarity] + (isE2 ? 1 : 0);
+
+        // Step 2: Role Bonus
+        let b1 = 0, b2 = 0;
+        if (c1.role === "controllo" && c2.role !== "controllo") b1 = 1;
+        else if (c2.role === "controllo" && c1.role !== "controllo") b2 = 1;
+        else {
+            const roleBeats = { attacco: "supporto", supporto: "difesa", difesa: "attacco" };
+            if (roleBeats[c1.role] === c2.role) b1 = 1;
+            if (roleBeats[c2.role] === c1.role) b2 = 1;
+        }
+
+        // Abilities (Block logic)
+        let a1Active = (c2.ability !== "block");
+        let a2Active = (c1.ability !== "block");
+
+        if (a1Active && c1.ability === "double") b1 *= 2;
+        if (a2Active && c2.ability === "double") b2 *= 2;
+
+        f1 += b1; f2 += b2;
+
+        // Step 3: Tag Bonus
+        let t1s = [...c1.tags], t2s = [...c2.tags];
+        if (a1Active && c1.ability === "copy") t1s = [...c2.tags];
+        if (a2Active && c2.ability === "copy") t2s = [...c1.tags];
+
+        const tagCounters = { fuoco: "natura", natura: "acqua", acqua: "fuoco", luce: "oscuro", oscuro: "luce" };
+        t1s.forEach(t1 => {
+            t2s.forEach(t2 => {
+                if (t1 === t2) { f1 += 1; f2 += 1; }
+                if (tagCounters[t1] === t2) f1 += 2;
+                if (tagCounters[t2] === t1) f2 += 2;
+            });
+        });
+
+        // Step 4: Final Abilities
+        if (a1Active && c1.ability === "boost") f1 += 1;
+        if (a2Active && c2.ability === "boost") f2 += 1;
+        
+        let d1 = Math.max(0, f2 - f1); // Damage to p1
+        let d2 = Math.max(0, f1 - f2); // Damage to p2
+
+        if (a1Active && c1.ability === "shield") d2 = Math.max(0, d2 - 1);
+        if (a2Active && c2.ability === "shield") d1 = Math.max(0, d1 - 1);
+        
+        if (a1Active && c1.ability === "drain" && d2 > 0) g.p1.hp = Math.min(20, g.p1.hp + 1);
+        if (a2Active && c2.ability === "drain" && d1 > 0) g.p2.hp = Math.min(20, g.p2.hp + 1);
+
+        // Results
+        g.p1.hp -= d1;
+        g.p2.hp -= d2;
+        
+        let log = `${c1.name} vs ${c2.name}: `;
+        if (d2 > d1) log += `${g.p1.email.split('@')[0]} infligge ${d2} danni!`;
+        else if (d1 > d2) log += `${g.p2.email.split('@')[0]} infligge ${d1} danni!`;
+        else log += "Pareggio!";
+
+        // Next Turn Prep
+        g.turn += 1;
+        g.p1.move = null;
+        g.p2.move = null;
+        g.p1.energy = Math.min(5, g.p1.energy + 1);
+        g.p2.energy = Math.min(5, g.p2.energy + 1);
+        g.lastLog = log;
+
+        if (g.p1.hp <= 0 || g.p2.hp <= 0 || g.turn > 10) {
+            g.status = "finished";
+            if (g.p1.hp > g.p2.hp) {
+                g.lastLog = "Vince " + g.p1.email;
+                if (auth.currentUser.uid === g.p1.uid) rewardWinner();
+            } else if (g.p2.hp > g.p1.hp) {
+                g.lastLog = "Vince " + g.p2.email;
+                if (auth.currentUser.uid === g.p2.uid) rewardWinner();
+            } else {
+                g.lastLog = "Pareggio finale!";
+            }
+        }
+
+        await gameRef.set(g);
+    }
+
+    function rewardWinner() {
+        users[currentUser].credits += 200;
+        saveState();
+        showToast("🏆 Vittoria! +200 Crediti", "success");
+    }
+
     loadState().then(() => {
         updateAccountList();
         updateUI();

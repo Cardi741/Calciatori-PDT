@@ -407,6 +407,82 @@ main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
     color: white;
 }
 
+/* Arena & Battle Styles */
+.hp-bar-container {
+    width: 250px;
+    height: 12px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 8px 0;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.hp-bar {
+    height: 100%;
+    background: linear-gradient(to right, #22c55e, #4ade80);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.energy-pips {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.energy-pip {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.energy-pip.active {
+    background: #3b82f6;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.played-card-slot {
+    width: 180px;
+    height: 250px;
+    border: 2px dashed rgba(255,255,255,0.1);
+    border-radius: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s;
+}
+
+.played-card-slot .card {
+    cursor: default;
+    transform: none !important;
+}
+
+.battle-animation-attack-player {
+    animation: attackPlayer 0.5s ease;
+}
+
+.battle-animation-attack-opp {
+    animation: attackOpp 0.5s ease;
+}
+
+@keyframes attackPlayer {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(50px) scale(1.1); }
+    100% { transform: translateX(0); }
+}
+
+@keyframes attackOpp {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(-50px) scale(1.1); }
+    100% { transform: translateX(0); }
+}
+
+#battle-team-selector .card {
+    cursor: pointer;
+}
+
 /* Toast System (added for future use in app.js) */
 #toast-container {
     position: fixed;
