@@ -5,7 +5,7 @@ const CARDS = [
     { id: 3, name: "Alessandro Sgattoni", rarity: "Mythic", value: 9000, color: "#ef4444", role: "difesa", tags: ["acqua"], ability: "shield" },
     { id: 4, name: "Marco P (ICON)", rarity: "Mythic", value: 12000, color: "#ef4444", role: "controllo", tags: ["oscuro"], ability: "block" },
     { id: 5, name: "Leo AZ (ICON)", rarity: "Mythic", value: 12000, color: "#ef4444", role: "supporto", tags: ["sacro"], ability: "drain" },
-    { id: 6, name: "Lorenzo El mas grande (DUSAN)", rarity: "Mythic", value: 15000, color: "#ef4444", role: "attacco", tags: ["fuoco", "oscura"], ability: "double" },
+    { id: 6, name: "Lorenzo El mas grande (DUSAN)", rarity: "Mythic", value: 15000, color: "#ef4444", role: "attacco", tags: ["fuoco", "oscuro"], ability: "double" },
     { id: 7, name: "Riccoh Giuatozzi (Prime moments)", rarity: "Mythic", value: 14000, color: "#ef4444", role: "controllo", tags: ["luce"], ability: "copy" },
     { id: 85, name: "Pippo Gol (Speciale)", rarity: "Mythic", value: 20000, color: "#ef4444", role: "attacco", tags: ["fuoco", "luce"], ability: "boost" },
 
@@ -269,7 +269,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (displayQty >= 3 && !isElite) {
             const fbtn = document.createElement('button'); fbtn.className = 'buy-btn'; fbtn.style.marginBottom = "5px"; fbtn.textContent = "FONDI (3x)";
-            fbtn.onclick = (e) => { e.stopPropagation(); users[currentUser].collection[card.id] = 1001; showToast("FUSIONE! Carta potenziata in ELITE", "success"); saveState(); updateUI(); };
+            fbtn.onclick = (e) => { 
+                e.stopPropagation(); 
+                users[currentUser].collection[card.id] = (users[currentUser].collection[card.id] - 3) + 1000; 
+                showToast("FUSIONE! Carta potenziata in ELITE", "success"); 
+                saveState(); updateUI(); 
+            };
             div.appendChild(fbtn);
         }
 
@@ -682,8 +687,15 @@ document.addEventListener('DOMContentLoaded', () => {
         auth?.signOut().catch(err => showToast("Errore logout: " + err.message, "danger"));
     }; 
     let userDbListener = null;
-    auth?.onAuthStateChanged(async (u) => { 
-        if (u) { 
+
+    async function initUserSession(u) {
+        // 1. Pulizia totale listener e stati precedenti
+        if (userDbListener) db.ref().off("value", userDbListener);
+        if (tradesListener) db.ref("pendingTrades").off("value", tradesListener);
+        db.ref("games").off();
+        
+        if (u) {
+            // SESSIONE GOOGLE
             document.getElementById('google-login').classList.add('hidden'); 
             document.getElementById('user-logged-in').classList.remove('hidden'); 
             document.getElementById('user-info').textContent = u.displayName; 
@@ -691,8 +703,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             await migrateLocalToCloud(u);
             
-            // Real-time synchronization for user data (collection/credits)
-            if (userDbListener) db.ref("users/" + u.uid).off("value", userDbListener);
             userDbListener = db.ref("users/" + u.uid).on("value", (snap) => {
                 if (snap.exists()) {
                     users[u.email] = snap.val();
@@ -703,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             listenForPendingTrades();
 
-            // RECOVERY: Controlla se l'utente è già in una partita attiva
+            // RECOVERY: Partita attiva
             db.ref("games").orderByChild("timestamp").limitToLast(10).once("value", (snap) => {
                 const allGames = snap.val();
                 if (allGames) {
@@ -715,21 +725,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         } else {
-            if (userDbListener && auth?.currentUser) {
-                db.ref("users/" + auth.currentUser.uid).off("value", userDbListener);
-                userDbListener = null;
-            }
-            if (tradesListener && auth?.currentUser) {
-                db.ref("pendingTrades").off("value", tradesListener);
-                tradesListener = null;
-            }
+            // SESSIONE LOCALE
             document.getElementById('google-login').classList.remove('hidden'); 
             document.getElementById('user-logged-in').classList.add('hidden'); 
             document.getElementById('p2p-trading').classList.add('hidden');
-            currentUser = "Default";
+            const last = localStorage.getItem('tcg_last_user');
+            currentUser = (last && users[last]) ? last : "Default";
             updateUI();
         }
-    }); 
+    }
+
+    auth?.onAuthStateChanged(u => initUserSession(u)); 
      
     // Account Management
     const userSelect = document.getElementById('user-select');
@@ -766,9 +772,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Navigation listeners
     const sections = ['shop-view', 'collection-view', 'trade-view', 'mercato-view', 'arena-view'];
     const showView = (id) => {
-        sections.forEach(s => document.getElementById(s).classList.add('hidden'));
-        document.getElementById(id).classList.remove('hidden');
+        sections.forEach(s => {
+            const el = document.getElementById(s);
+            if (el) el.classList.add('hidden');
+        });
+        const target = document.getElementById(id);
+        if (target) target.classList.remove('hidden');
+        
+        // Forza re-render per evitare UI "morta"
+        if (id === 'shop-view') renderShop();
+        if (id === 'collection-view') renderCollection();
         if (id === 'arena-view') renderArenaLobby();
+        if (id === 'mercato-view') renderMercato();
+        if (id === 'trade-view') renderTrade();
     };
 
     document.getElementById('show-shop').onclick = () => showView('shop-view'); 
@@ -890,8 +906,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const opponent = waiting[oppId];
                 const gameId = "game_" + now;
                 const gameData = {
-                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 2, move: null },
-                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 2, move: null },
+                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 5, move: null },
+                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 5, move: null },
                     status: "playing",
                     turn: 1,
                     lastLog: "Battaglia Iniziata!",
@@ -969,6 +985,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderEnergy('player-energy', me.energy);
         renderEnergy('opp-energy', opp.energy);
+        
+        // Nuova info testuale energia
+        document.getElementById('battle-timer').innerHTML = `
+            <div style="font-weight:bold; color: #3b82f6;">TUA ENERGIA: ${me.energy}/5⚡</div>
+            <div style="font-size: 0.8rem; opacity: 0.7;">Energia Avversaria: ${opp.energy}/5⚡</div>
+        `;
 
         document.getElementById('turn-counter').textContent = `TURNO ${battleState.turn}/10`;
         document.getElementById('battle-log').textContent = battleState.lastLog;
@@ -1029,6 +1051,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (battleState.status === "finished") {
             db.ref("games/" + currentGameSession).off();
+            
+            // Verifica ricompensa (se non ancora data per questa sessione)
+            const sessionKey = "rewarded_" + currentGameSession;
+            if (!localStorage.getItem(sessionKey)) {
+                if (battleState[myRole].hp > battleState[myRole === 'p1' ? 'p2' : 'p1'].hp) {
+                    rewardWinner();
+                }
+                localStorage.setItem(sessionKey, "true");
+            }
+
             setTimeout(() => {
                 alert("Battaglia Conclusa: " + battleState.lastLog);
                 location.reload();
@@ -1134,10 +1166,8 @@ document.addEventListener('DOMContentLoaded', () => {
             g.status = "finished";
             if (g.p1.hp > g.p2.hp) {
                 g.lastLog = "Vince " + g.p1.email;
-                if (auth.currentUser.uid === g.p1.uid) rewardWinner();
             } else if (g.p2.hp > g.p1.hp) {
                 g.lastLog = "Vince " + g.p2.email;
-                if (auth.currentUser.uid === g.p2.uid) rewardWinner();
             } else {
                 g.lastLog = "Pareggio finale!";
             }
