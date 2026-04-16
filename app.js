@@ -764,6 +764,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-arena').onclick = () => showView('arena-view');
     document.getElementById('show-trade').onclick = () => showView('trade-view'); 
 
+    document.getElementById('forfeit-battle-btn').onclick = async () => {
+        if (!currentGameSession) return;
+        if (confirm("Vuoi davvero abbandonare la partita? Verrà contata come sconfitta.")) {
+            await db.ref(`games/${currentGameSession}`).update({ status: 'finished', lastLog: "Partita abbandonata." });
+        }
+    };
+
     // Trade tab switching
     document.getElementById('tab-received').onclick = () => {
         currentTradeTab = 'received';
@@ -928,18 +935,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = CARDS.find(c => c.id == cardId);
             const el = renderCard(card);
             const cost = getCardCost(card);
-            el.innerHTML += `<div style="margin-top:5px; font-weight:bold; color:#3b82f6">Cost: ${cost}⚡</div>`;
+            
+            const actionArea = document.createElement('div');
+            actionArea.style.marginTop = "8px";
+            actionArea.innerHTML = `<div style="font-weight:bold; color:#3b82f6; margin-bottom:5px;">${cost}⚡ Energia</div>`;
+            
+            const playBtn = document.createElement('button');
+            playBtn.className = 'buy-btn';
+            playBtn.style.padding = "0.4rem 1rem";
+            playBtn.textContent = "GIOCA";
             
             if (me.energy >= cost && !me.move) {
-                el.onclick = () => {
-                    const isElite = (user.collection[cardId] >= 1000); // Convenzione interna per Elite
-                    db.ref(`games/${currentGameSession}/${myRole}/move`).set(cardId);
-                    db.ref(`games/${currentGameSession}/${myRole}/moveElite`).set(isElite);
+                playBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    playBtn.disabled = true;
+                    playBtn.textContent = "...";
+                    const isElite = (user.collection[cardId] >= 1000);
+                    db.ref(`games/${currentGameSession}/${myRole}`).update({
+                        move: cardId,
+                        moveElite: isElite,
+                        energy: me.energy - cost
+                    });
                 };
             } else {
-                el.style.opacity = "0.5";
-                el.style.cursor = "not-allowed";
+                playBtn.disabled = true;
+                playBtn.style.opacity = "0.5";
+                if (me.move) playBtn.textContent = "ATTENDI";
+                else playBtn.textContent = "NO⚡";
             }
+            
+            actionArea.appendChild(playBtn);
+            el.appendChild(actionArea);
             hand.appendChild(el);
         });
 
