@@ -103,7 +103,7 @@
             <div class="view-header"><h2>⚔️ Arena della Battaglia</h2></div>
             
             <div id="arena-lobby">
-                <div class="lobby-card" style="max-width: 600px; margin: 0 auto; background: rgba(255,255,255,0.02); padding: 2rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                <div class="lobby-card" style="max-width: 700px; margin: 0 auto; background: rgba(255,255,255,0.02); padding: 2rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); text-align: center;">
                     <h3>Prepara il tuo Team</h3>
                     <p style="color: var(--text-secondary); margin-bottom: 20px;">Seleziona 5 carte per scendere in campo.</p>
                     
@@ -111,9 +111,20 @@
                         <!-- Team selezionato qui -->
                     </div>
 
-                    <div style="display: flex; gap: 15px; justify-content: center;">
+                    <div style="display: flex; gap: 15px; justify-content: center; margin-bottom: 20px;">
                         <button id="auto-team-btn" class="buy-btn" style="background: var(--bg-card); border: 1px solid var(--accent); width: auto;">Auto-Team</button>
                         <button id="join-battle-btn" class="buy-btn" style="width: auto;" disabled>CERCA SFIDANTE</button>
+                    </div>
+
+                    <div class="trait-legend">
+                        <div class="trait-item"><b>Rapido</b> <span>Batte Fisico(+1), Strat(+2)</span></div>
+                        <div class="trait-item"><b>Fisico</b> <span>Batte Strat(+1), Dribbl(+2)</span></div>
+                        <div class="trait-item"><b>Strategico</b> <span>Batte Dribbl(+1), Lead(+2)</span></div>
+                        <div class="trait-item"><b>Dribblatore</b> <span>Batte Lead(+1), Cecch(+2)</span></div>
+                        <div class="trait-item"><b>Leader</b> <span>Batte Cecch(+1), Tecn(+2)</span></div>
+                        <div class="trait-item"><b>Cecchino</b> <span>Batte Tecn(+1), Rap(+2)</span></div>
+                        <div class="trait-item"><b>Tecnico</b> <span>Batte Rap(+1), Fis(+2)</span></div>
+                        <div class="trait-item"><b>Jolly</b> <span>Bonus universale(+1)</span></div>
                     </div>
 
                     <div id="matchmaking-status" class="hidden" style="margin-top: 20px;">

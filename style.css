@@ -150,14 +150,26 @@ main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
 .rarity-legendary { 
     border-color: var(--legendary); 
     background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(245, 158, 11, 0.1));
+    background-size: 200% 200%;
+    animation: goldShimmer 5s ease infinite;
 } 
+@keyframes goldShimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
 .rarity-legendary:hover { box-shadow: 0 0 30px rgba(245, 158, 11, 0.4); }
 
 .rarity-mythic { 
     border-color: var(--mythic); 
-    background: linear-gradient(145deg, rgba(30, 41, 59, 0.8), rgba(239, 68, 68, 0.15));
-    animation: mythicGlow 3s infinite alternate;
-} 
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.9), rgba(239, 68, 68, 0.2));
+    animation: mythicGlow 3s infinite alternate, mythicPulse 2s infinite ease-in-out;
+}
+@keyframes mythicPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
 @keyframes mythicGlow { 
     from { box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); } 
     to { box-shadow: 0 0 40px rgba(239, 68, 68, 0.6); } 
@@ -409,7 +421,7 @@ main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
 
 /* Arena & Battle Styles */
 .hp-bar-container {
-    width: 250px;
+    width: 200px;
     height: 12px;
     background: rgba(255,255,255,0.1);
     border-radius: 6px;
@@ -426,13 +438,13 @@ main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
 
 .energy-pips {
     display: flex;
-    gap: 5px;
+    gap: 3px;
     margin-top: 8px;
 }
 
 .energy-pip {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.2);
@@ -506,4 +518,35 @@ main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
 @keyframes slideIn {
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
+}
+
+.trait-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 20px;
+    font-size: 0.75rem;
+    text-align: left;
+}
+
+.trait-item {
+    background: rgba(255,255,255,0.05);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.trait-item b { color: var(--accent); margin-bottom: 2px; }
+
+.synergy-indicator {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    font-size: 0.65rem;
+    font-weight: bold;
+    margin: 2px;
 }
