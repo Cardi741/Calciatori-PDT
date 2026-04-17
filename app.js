@@ -261,8 +261,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div'); 
         div.className = `card rarity-${card.rarity.toLowerCase()} ${missing?'missing':''} ${displayQty>1?'duplicate':''} ${isElite?'elite':''}`; 
         div.style.borderColor = card.color; 
+        
+        // Face Container with fallback
+        const faceHtml = `
+            <div class="card-face-container">
+                <img src="faccie/${card.id}.png" class="player-face" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <svg class="face-placeholder" style="display:none;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+            </div>
+        `;
+
         div.innerHTML = `
             <div class="rarity" style="color:${card.color}">${isElite?'ELITE ':''}${card.rarity}</div>
+            ${faceHtml}
             <h4>${card.name}</h4>
             <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 5px;">
                 ${card.role.toUpperCase()} | ${card.tratto || 'Nessun Tratto'}
@@ -310,21 +320,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const cont = document.querySelector('.pack-container'); cont.innerHTML = ''; 
         Object.entries(PACK_TYPES).forEach(([id, p]) => { 
             const d = document.createElement('div'); d.className = `pack pack-${id}`; 
-            d.innerHTML = `<h3>${p.name}</h3><p>${p.cost} Crediti</p><button class="buy-btn">Apri</button>`; 
+            d.innerHTML = `
+                <div class="pack-visual">
+                    <svg width="80" height="110" viewBox="0 0 80 110" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom:15px; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));">
+                        <rect width="80" height="110" rx="8" fill="#1e293b" stroke="white" stroke-opacity="0.1" stroke-width="2"/>
+                        <path d="M0 20L80 40V60L0 80V20Z" fill="white" fill-opacity="0.05"/>
+                        <circle cx="40" cy="55" r="20" stroke="white" stroke-opacity="0.2" stroke-width="2" stroke-dasharray="4 4"/>
+                        <text x="40" y="60" text-anchor="middle" fill="white" fill-opacity="0.3" font-size="12" font-weight="bold" style="text-transform:uppercase">${p.name[0]}</text>
+                    </svg>
+                </div>
+                <h3>${p.name}</h3>
+                <p>${p.cost} Crediti</p>
+                <button class="buy-btn">Apri</button>
+            `; 
             
             const btn = d.querySelector('button');
-            // Supporto touch per iPhone
-            btn.addEventListener('touchstart', (e) => e.stopPropagation(), {passive: true});
-
             btn.onclick = () => { 
-                const res = openPack(id); if (res) { 
-                    document.getElementById('pack-modal').classList.remove('hidden'); 
-                    document.getElementById('close-pack-btn').classList.add('hidden');
-                    const grid = document.getElementById('modal-cards-grid'); grid.innerHTML = ''; 
-                    res.forEach((c, i) => setTimeout(() => { const el = renderCard(c); el.classList.add('reveal-animation'); grid.appendChild(el); }, i*600)); 
-                    setTimeout(() => document.getElementById('close-pack-btn').classList.remove('hidden'), 3500); 
-                    updateUI(); 
-                } 
+                const user = users[currentUser];
+                if (user.credits < p.cost) { showToast("Crediti insufficienti!", "danger"); return; }
+                
+                // Animazione pacchetto che trema
+                d.classList.add('pack-opening-active');
+                
+                setTimeout(() => {
+                    const res = openPack(id); 
+                    d.classList.remove('pack-opening-active');
+                    if (res) { 
+                        document.getElementById('pack-modal').classList.remove('hidden'); 
+                        document.getElementById('close-pack-btn').classList.add('hidden');
+                        const grid = document.getElementById('modal-cards-grid'); grid.innerHTML = ''; 
+                        res.forEach((c, i) => setTimeout(() => { 
+                            const el = renderCard(c); 
+                            el.classList.add('reveal-animation'); 
+                            grid.appendChild(el); 
+                            // Suono o feedback tattile qui se possibile
+                        }, i*600)); 
+                        setTimeout(() => document.getElementById('close-pack-btn').classList.remove('hidden'), 3500); 
+                        updateUI(); 
+                    } 
+                }, 800);
             }; 
             cont.appendChild(d); 
         }); 
@@ -802,6 +836,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.getElementById('show-shop').onclick = () => showView('shop-view'); 
+    document.getElementById('credits-display').onclick = () => {
+        showView('shop-view');
+        document.getElementById('credit-shop').scrollIntoView({ behavior: 'smooth' });
+    };
     document.getElementById('show-collection').onclick = () => showView('collection-view'); 
     document.getElementById('show-arena').onclick = () => showView('arena-view');
     document.getElementById('show-leaderboard').onclick = () => showView('leaderboard-view');
@@ -1391,6 +1429,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * IMPORTANTE PER IL PROPRIETARIO:
+     * Al momento il sistema usa il Client ID di prova "sb" (Sandbox).
+     * Per ricevere pagamenti reali sul tuo conto PayPal:
+     * 1. Vai su https://developer.paypal.com/ e crea una "Live App".
+     * 2. Copia il tuo "Client ID" reale.
+     * 3. Nel file index.html, sostituisci "client-id=sb" con "client-id=IL_TUO_ID_REALE".
+     */
     function initPayPalButtons() {
         const packs = [
             { id: 1000, amount: '1.99', credits: 1000 },
@@ -1437,14 +1483,24 @@ document.addEventListener('DOMContentLoaded', () => {
  
 function renderMercato() { 
     const grid = document.getElementById('mercato-grid'); grid.innerHTML = ''; 
+    const MULTIPLIER = 1.7; // 170%
     [...CARDS].sort((a,b) => a.id - b.id).forEach(c => { 
+        const cost = Math.floor(c.value * MULTIPLIER);
         const div = document.createElement('div'); div.className = `card rarity-${c.rarity.toLowerCase()}`; 
         div.style.borderColor = c.color;
-        div.innerHTML = `<div class="rarity" style="color:${c.color}">${c.rarity}</div><h4>${c.name}</h4><div class="value">Costo: ${c.value*3}</div><button class="buy-btn" style="margin-top:10px">Compra</button>`; 
+
+        const faceHtml = `
+            <div class="card-face-container">
+                <img src="faccie/${c.id}.png" class="player-face" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <svg class="face-placeholder" style="display:none;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+            </div>
+        `;
+
+        div.innerHTML = `<div class="rarity" style="color:${c.color}">${c.rarity}</div>${faceHtml}<h4>${c.name}</h4><div class="value">Costo: ${cost}</div><button class="buy-btn" style="margin-top:10px">Compra</button>`; 
         div.querySelector('button').onclick = (e) => { 
             e.stopPropagation();
-            if (users[currentUser].credits >= c.value*3) { 
-                users[currentUser].credits -= c.value*3; 
+            if (users[currentUser].credits >= cost) { 
+                users[currentUser].credits -= cost; 
                 users[currentUser].collection[c.id] = (users[currentUser].collection[c.id]||0)+1; 
                 showToast(`${c.name} acquistato!`); saveState(); updateUI(); 
             } else {
