@@ -49,6 +49,10 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                     Arena
                 </button>
+                <button id="show-leaderboard">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                    Classifica
+                </button>
                 <button id="show-trade">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: middle;"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
                     Scambi
@@ -168,8 +172,34 @@
                 </div>
 
                 <div id="player-hand-container">
-                    <h4 style="text-align: center; margin-bottom: 1rem;">La tua Mano</h4>
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 1rem;">
+                        <h4 style="margin: 0;">La tua Mano</h4>
+                        <button id="pass-turn-btn" class="buy-btn" style="width: auto; background: #475569; padding: 0.4rem 1rem;">PASSA TURNO (+2⚡)</button>
+                    </div>
                     <div id="player-hand" class="card-grid mini" style="justify-content: center;"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="leaderboard-view" class="hidden">
+            <div class="view-header">
+                <h2>🏆 Classifica Mondiale</h2>
+                <div id="leaderboard-sync-status" style="font-size: 0.8rem; color: var(--text-secondary);">Aggiornato in tempo reale</div>
+            </div>
+            
+            <div class="leaderboard-container">
+                <div class="podium-container" id="leaderboard-podium">
+                    <!-- Top 3 qui -->
+                </div>
+                
+                <div class="leaderboard-list-header">
+                    <span>Pos.</span>
+                    <span>Allenatore</span>
+                    <span>Trofei</span>
+                    <span>Partite</span>
+                </div>
+                <div id="leaderboard-list" class="leaderboard-list">
+                    <!-- Altri qui -->
                 </div>
             </div>
         </section>

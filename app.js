@@ -123,7 +123,7 @@ const PACK_TYPES = {
     mythic: { name: "Mito", cost: 10000, odds: { Mythic: 30, Legendary: 30, Epic: 20, Rare: 10, Common: 10 } } 
 }; 
  
-let users = { "Default": { credits: INITIAL_CREDITS, collection: {}, lastDailyBonus: 0 } }; 
+let users = { "Default": { credits: INITIAL_CREDITS, collection: {}, trophies: 0, gamesPlayed: 0, lastDailyBonus: 0 } }; 
 let currentUser = "Default"; let showMissing = false; 
 let selectedCardId = null; let requestedCardId = null;
 let currentBattleTeam = [];
@@ -168,11 +168,13 @@ async function migrateLocalToCloud(fUser) {
         if (users["Default"] && Object.keys(users["Default"].collection).length > 0) { 
             users[fUser.email] = JSON.parse(JSON.stringify(users["Default"])); 
         } else { 
-            users[fUser.email] = { credits: INITIAL_CREDITS, collection: {}, lastDailyBonus: Date.now() }; 
+            users[fUser.email] = { credits: INITIAL_CREDITS, collection: {}, trophies: 0, gamesPlayed: 0, lastDailyBonus: Date.now() }; 
         } 
         users[fUser.email].email = fUser.email; 
     } else { 
         users[fUser.email] = snap.val(); 
+        if (users[fUser.email].trophies === undefined) users[fUser.email].trophies = 0;
+        if (users[fUser.email].gamesPlayed === undefined) users[fUser.email].gamesPlayed = 0;
     } 
     currentUser = fUser.email; 
     await saveState(); 
@@ -225,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
  
     function updateUI() { 
         if (!users[currentUser]) {
-            users[currentUser] = { credits: INITIAL_CREDITS, collection: {}, lastDailyBonus: 0 };
+            users[currentUser] = { credits: INITIAL_CREDITS, collection: {}, trophies: 0, gamesPlayed: 0, lastDailyBonus: 0 };
         }
         const user = users[currentUser]; 
         
@@ -282,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const fbtn = document.createElement('button'); fbtn.className = 'buy-btn'; fbtn.style.marginBottom = "5px"; fbtn.textContent = "FONDI (3x)";
             fbtn.onclick = (e) => { 
                 e.stopPropagation(); 
-                users[currentUser].collection[card.id] = (users[currentUser].collection[card.id] - 3) + 1000; 
+                users[currentUser].collection[card.id] = (users[currentUser].collection[card.id] - 3) + 1001; 
                 showToast("FUSIONE! Carta potenziata in ELITE", "success"); 
                 saveState(); updateUI(); 
             };
@@ -781,7 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Navigation listeners
-    const sections = ['shop-view', 'collection-view', 'trade-view', 'mercato-view', 'arena-view'];
+    const sections = ['shop-view', 'collection-view', 'trade-view', 'mercato-view', 'arena-view', 'leaderboard-view'];
     const showView = (id) => {
         sections.forEach(s => {
             const el = document.getElementById(s);
@@ -794,6 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (id === 'shop-view') renderShop();
         if (id === 'collection-view') renderCollection();
         if (id === 'arena-view') renderArenaLobby();
+        if (id === 'leaderboard-view') renderLeaderboard();
         if (id === 'mercato-view') renderMercato();
         if (id === 'trade-view') renderTrade();
     };
@@ -801,6 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-shop').onclick = () => showView('shop-view'); 
     document.getElementById('show-collection').onclick = () => showView('collection-view'); 
     document.getElementById('show-arena').onclick = () => showView('arena-view');
+    document.getElementById('show-leaderboard').onclick = () => showView('leaderboard-view');
     document.getElementById('show-trade').onclick = () => showView('trade-view'); 
 
     document.getElementById('forfeit-battle-btn').onclick = async () => {
@@ -933,8 +937,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const opponent = waiting[oppId];
                 const gameId = "game_" + now;
                 const gameData = {
-                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 5, move: null, nextCostMod: 0 },
-                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 5, move: null, nextCostMod: 0 },
+                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 10, move: null, nextCostMod: 0 },
+                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 10, move: null, nextCostMod: 0 },
                     status: "playing",
                     turn: 1,
                     lastLog: "Battaglia Iniziata!",
@@ -1000,6 +1004,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const me = battleState[myRole];
         const opp = battleState[myRole === 'p1' ? 'p2' : 'p1'];
         const user = users[currentUser];
+
+        const passBtn = document.getElementById('pass-turn-btn');
+        if (me.move) {
+            passBtn.disabled = true;
+            passBtn.style.opacity = "0.5";
+        } else {
+            passBtn.disabled = false;
+            passBtn.style.opacity = "1";
+            passBtn.onclick = () => {
+                if (confirm("Vuoi passare il turno? Recupererai +2 Energia ma subirai danni diretti se l'avversario gioca una carta.")) {
+                    db.ref(`games/${currentGameSession}/${myRole}`).update({
+                        move: -1
+                    });
+                }
+            };
+        }
 
         document.getElementById('player-name').textContent = me.email.split('@')[0];
         document.getElementById('opp-name').textContent = opp.email.split('@')[0];
@@ -1071,15 +1091,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (me.move) {
-            const card = CARDS.find(c => c.id == me.move);
-            document.getElementById('player-played-card').innerHTML = '';
-            document.getElementById('player-played-card').appendChild(renderCard(card));
+            if (me.move === -1) {
+                document.getElementById('player-played-card').innerHTML = '<div class="card" style="border-color:#475569; display:flex; align-items:center; justify-content:center;"><h4>TURNO PASSATO</h4></div>';
+            } else {
+                const card = CARDS.find(c => c.id == me.move);
+                document.getElementById('player-played-card').innerHTML = '';
+                document.getElementById('player-played-card').appendChild(renderCard(card));
+            }
         } else {
             document.getElementById('player-played-card').innerHTML = 'Scegli una carta...';
         }
 
         if (opp.move) {
-            document.getElementById('opp-played-card').innerHTML = '<div class="card" style="height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05);"><h4>CARTA PRONTA</h4></div>';
+            if (opp.move === -1) {
+                document.getElementById('opp-played-card').innerHTML = '<div class="card" style="border-color:#475569; display:flex; align-items:center; justify-content:center;"><h4>TURNO PASSATO</h4></div>';
+            } else {
+                document.getElementById('opp-played-card').innerHTML = '<div class="card" style="height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05);"><h4>CARTA PRONTA</h4></div>';
+            }
         } else {
             document.getElementById('opp-played-card').innerHTML = 'In attesa...';
         }
@@ -1140,21 +1168,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const snap = await gameRef.once("value");
         const g = snap.val();
         
-        const c1 = CARDS.find(c => c.id == g.p1.move);
-        const c2 = CARDS.find(c => c.id == g.p2.move);
+        const c1 = g.p1.move !== -1 ? CARDS.find(c => c.id == g.p1.move) : null;
+        const c2 = g.p2.move !== -1 ? CARDS.find(c => c.id == g.p2.move) : null;
 
         const syn1 = getSynergies(g.p1.team);
         const syn2 = getSynergies(g.p2.team);
 
         // Step 1: Base Force
-        let f1 = { Common:1, Rare:2, Epic:3, Legendary:4, Mythic:5 }[c1.rarity] + (g.p1.moveElite ? 1 : 0);
-        let f2 = { Common:1, Rare:2, Epic:3, Legendary:4, Mythic:5 }[c2.rarity] + (g.p2.moveElite ? 1 : 0);
+        let f1 = c1 ? ({ Common:1, Rare:2, Epic:3, Legendary:4, Mythic:5 }[c1.rarity] + (g.p1.moveElite ? 1 : 0)) : 0;
+        let f2 = c2 ? ({ Common:1, Rare:2, Epic:3, Legendary:4, Mythic:5 }[c2.rarity] + (g.p2.moveElite ? 1 : 0)) : 0;
 
         // Synergies Base
         f1 += syn1.allForce;
         f2 += syn2.allForce;
-        if (c1.role === "attacco") f1 += syn1.attackForce;
-        if (c2.role === "attacco") f2 += syn2.attackForce;
+        if (c1 && c1.role === "attacco") f1 += syn1.attackForce;
+        if (c2 && c2.role === "attacco") f2 += syn2.attackForce;
+
+        // Step 1.5: Role RPS Bonus
+        const ROLE_COUNTERS = {
+            "attacco": "supporto",
+            "supporto": "controllo",
+            "controllo": "difesa",
+            "difesa": "attacco"
+        };
+        if (c1 && c2) {
+            if (ROLE_COUNTERS[c1.role] === c2.role) f1 += 1;
+            if (ROLE_COUNTERS[c2.role] === c1.role) f2 += 1;
+        }
 
         // Step 2: Traits Counter
         const TRAIT_COUNTERS = {
@@ -1174,12 +1214,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return 0;
         }
 
-        f1 += getTraitBonus(c1.tratto, c2.tratto);
-        f2 += getTraitBonus(c2.tratto, c1.tratto);
+        if (c1 && c2) {
+            f1 += getTraitBonus(c1.tratto, c2.tratto);
+            f2 += getTraitBonus(c2.tratto, c1.tratto);
+        }
 
         // Step 3: Abilities
-        let a1Active = (c2.ability !== "Pressing");
-        let a2Active = (c1.ability !== "Pressing");
+        let a1Active = c1 && (!c2 || c2.ability !== "Pressing");
+        let a2Active = c2 && (!c1 || c1.ability !== "Pressing");
         
         g.p1.nextCostMod = 0;
         g.p2.nextCostMod = 0;
@@ -1187,14 +1229,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Ability Logic
         if (a1Active) {
             if (c1.ability === "Assist") g.p1.nextCostMod = -1;
-            if (c1.ability === "Dribbling Ubriacante" && c2.role === "difesa") f1 += 2;
-            if (c1.ability === "Contropiede" && c2.role === "attacco") f1 += 2;
+            if (c1.ability === "Dribbling Ubriacante" && c2 && c2.role === "difesa") f1 += 2;
+            if (c1.ability === "Contropiede" && c2 && c2.role === "attacco") f1 += 2;
             if (c1.ability === "Zona Cesarini" && g.p1.hp < 5) f1 += 3;
         }
         if (a2Active) {
             if (c2.ability === "Assist") g.p2.nextCostMod = -1;
-            if (c2.ability === "Dribbling Ubriacante" && c1.role === "difesa") f2 += 2;
-            if (c2.ability === "Contropiede" && c1.role === "attacco") f2 += 2;
+            if (c2.ability === "Dribbling Ubriacante" && c1 && c1.role === "difesa") f2 += 2;
+            if (c2.ability === "Contropiede" && c1 && c1.role === "attacco") f2 += 2;
             if (c2.ability === "Zona Cesarini" && g.p2.hp < 5) f2 += 3;
         }
 
@@ -1216,16 +1258,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (syn1.stealEnergy) energySteal1 = 1;
         if (syn2.stealEnergy) energySteal2 = 1;
 
-        let log = `${c1.name} vs ${c2.name}: `;
+        let log = "";
+        if (c1 && c2) log = `${c1.name} vs ${c2.name}: `;
+        else if (c1) log = `${c1.name} attacca direttamente! `;
+        else if (c2) log = `L'avversario attacca direttamente! `;
+        else log = "Entrambi hanno passato il turno. ";
+
         if (d2 > d1) log += `P1 infligge ${d2} danni!`;
         else if (d1 > d2) log += `P2 infligge ${d1} danni!`;
         else log += "Pareggio!";
 
+        // Dynamic Energy: Winner gets +1, Loser gets +3 (for comeback)
+        let energyGain1 = 1;
+        let energyGain2 = 1;
+
+        if (g.p1.move === -1) energyGain1 = 2; // Bonus for passing
+        if (g.p2.move === -1) energyGain2 = 2;
+
+        if (d2 > d1) { // P1 wins clash
+            energyGain1 = Math.max(energyGain1, 1);
+            energyGain2 = Math.max(energyGain2, 3);
+        } else if (d1 > d2) { // P2 wins clash
+            energyGain1 = Math.max(energyGain1, 3);
+            energyGain2 = Math.max(energyGain2, 1);
+        }
+
         // Prep Next Turn
         g.turn += 1;
         g.p1.move = null; g.p2.move = null;
-        g.p1.energy = Math.min(10, g.p1.energy + 1 + energySteal1 - energySteal2);
-        g.p2.energy = Math.min(10, g.p2.energy + 1 + energySteal2 - energySteal1);
+        g.p1.energy = Math.min(10, g.p1.energy + energyGain1 + energySteal1 - energySteal2);
+        g.p2.energy = Math.min(10, g.p2.energy + energyGain2 + energySteal2 - energySteal1);
         g.p1.energy = Math.max(0, g.p1.energy);
         g.p2.energy = Math.max(0, g.p2.energy);
         g.lastLog = log;
@@ -1242,8 +1304,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function rewardWinner() {
         users[currentUser].credits += 200;
+        users[currentUser].trophies = (users[currentUser].trophies || 0) + 35;
+        users[currentUser].gamesPlayed = (users[currentUser].gamesPlayed || 0) + 1;
         saveState();
-        showToast("🏆 Vittoria! +200 Crediti", "success");
+        showToast("🏆 Vittoria! +200 Crediti e +35 Trofei", "success");
+    }
+
+    async function renderLeaderboard() {
+        const podium = document.getElementById('leaderboard-podium');
+        const list = document.getElementById('leaderboard-list');
+        podium.innerHTML = '<div class="spinner"></div>';
+        list.innerHTML = '';
+
+        try {
+            const snap = await db.ref("users").once("value");
+            const allUsers = snap.val();
+            if (!allUsers) return;
+
+            const players = Object.values(allUsers)
+                .filter(u => u.gamesPlayed > 0)
+                .sort((a, b) => (b.trophies || 0) - (a.trophies || 0))
+                .slice(0, 100);
+
+            podium.innerHTML = '';
+            
+            // Render Podium (Top 3)
+            const ranks = ['second', 'first', 'third'];
+            const icons = ['🥈', '🥇', '🥉'];
+            
+            [1, 0, 2].forEach(idx => {
+                const p = players[idx];
+                const div = document.createElement('div');
+                div.className = `podium-item ${ranks[idx]}`;
+                
+                if (p) {
+                    div.innerHTML = `
+                        <div class="podium-rank">${icons[idx]}</div>
+                        <div class="podium-name">${p.email.split('@')[0]}</div>
+                        <div class="podium-trophies">${p.trophies || 0} 🏆</div>
+                    `;
+                } else {
+                    div.innerHTML = `<div class="podium-rank">${icons[idx]}</div><div class="podium-name">---</div>`;
+                }
+                podium.appendChild(div);
+            });
+
+            // Render List (Others)
+            players.forEach((p, i) => {
+                const item = document.createElement('div');
+                item.className = `leaderboard-item ${p.email === auth?.currentUser?.email ? 'me' : ''}`;
+                item.innerHTML = `
+                    <div class="rank-number">#${i + 1}</div>
+                    <div class="player-name">${p.email.split('@')[0]}</div>
+                    <div class="trophy-count">${p.trophies || 0} 🏆</div>
+                    <div class="games-count">${p.gamesPlayed || 0} 🎮</div>
+                `;
+                list.appendChild(item);
+            });
+
+        } catch (e) {
+            console.error(e);
+            podium.innerHTML = "Errore nel caricamento classifica.";
+        }
     }
 
     loadState().then(() => {

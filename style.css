@@ -550,3 +550,98 @@ main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
     font-weight: bold;
     margin: 2px;
 }
+
+/* Leaderboard Styles */
+.leaderboard-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.podium-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: 4rem;
+    padding-top: 2rem;
+}
+
+.podium-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 20px 20px 10px 10px;
+    padding: 1.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 180px;
+    transition: transform 0.3s ease;
+}
+
+.podium-item:hover { transform: translateY(-5px); }
+
+.podium-item.first { 
+    height: 220px; 
+    border-color: #facc15; 
+    box-shadow: 0 10px 30px rgba(250, 204, 21, 0.15); 
+    order: 2;
+}
+.podium-item.second { height: 180px; border-color: #cbd5e1; order: 1; }
+.podium-item.third { height: 160px; border-color: #94615c; order: 3; }
+
+.podium-rank {
+    font-size: 2rem;
+    font-weight: 900;
+    margin-bottom: 0.5rem;
+}
+
+.podium-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.2rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.podium-trophies {
+    color: #facc15;
+    font-weight: 800;
+}
+
+.leaderboard-list-header {
+    display: grid;
+    grid-template-columns: 60px 1fr 100px 100px;
+    padding: 1rem 1.5rem;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px 12px 0 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.leaderboard-list {
+    background: rgba(255,255,255,0.02);
+    border-radius: 0 0 12px 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-top: none;
+}
+
+.leaderboard-item {
+    display: grid;
+    grid-template-columns: 60px 1fr 100px 100px;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    align-items: center;
+}
+
+.leaderboard-item:last-child { border-bottom: none; }
+.leaderboard-item.me { background: rgba(59, 130, 246, 0.1); }
+
+.rank-number { font-weight: 800; color: var(--text-secondary); }
+.player-name { font-weight: 600; }
+.trophy-count { color: #facc15; font-weight: 700; }
+.games-count { color: var(--text-secondary); font-size: 0.9rem; }
