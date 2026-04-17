@@ -117,10 +117,10 @@ try {
  
 const INITIAL_CREDITS = 550; 
 const PACK_TYPES = { 
-    standard: { name: "Standard", cost: 100, odds: { Mythic: 0.1, Legendary: 1.9, Epic: 8, Rare: 20, Common: 70 } }, 
-    premium: { name: "Premium", cost: 500, odds: { Mythic: 1, Legendary: 9, Epic: 30, Rare: 40, Common: 20 } }, 
-    legendary: { name: "Legendario", cost: 2000, odds: { Mythic: 5, Legendary: 40, Epic: 30, Rare: 15, Common: 10 } }, 
-    mythic: { name: "Mito", cost: 10000, odds: { Mythic: 30, Legendary: 30, Epic: 20, Rare: 10, Common: 10 } } 
+    standard: { name: "Standard", cost: 100, count: 4, odds: { Mythic: 0.1, Legendary: 1.9, Epic: 8, Rare: 20, Common: 70 } }, 
+    premium: { name: "Premium", cost: 500, count: 5, odds: { Mythic: 1, Legendary: 9, Epic: 30, Rare: 40, Common: 20 } }, 
+    legendary: { name: "Leggendario", cost: 2000, count: 6, odds: { Mythic: 5, Legendary: 40, Epic: 30, Rare: 15, Common: 10 } }, 
+    mythic: { name: "Mito", cost: 10000, count: 7, odds: { Mythic: 30, Legendary: 30, Epic: 20, Rare: 10, Common: 10 } } 
 }; 
  
 let users = { "Default": { credits: INITIAL_CREDITS, collection: {}, trophies: 0, gamesPlayed: 0, lastDailyBonus: 0 } }; 
@@ -193,7 +193,7 @@ function openPack(type) {
     const pack = PACK_TYPES[type]; const user = users[currentUser]; 
     if (user.credits < pack.cost) { showToast("Crediti insufficienti!", "danger"); return null; } 
     user.credits -= pack.cost; const cards = []; 
-    for (let i = 0; i < 5; i++) { 
+    for (let i = 0; i < pack.count; i++) { 
         const c = getRandomCard(pack.odds); cards.push(c); 
         user.collection[c.id] = (user.collection[c.id] || 0) + 1; 
     } 
@@ -355,9 +355,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             // Effetto speciale per carte Rare/Mythic
                             if (c.rarity === "Legendary" || c.rarity === "Mythic") {
-                                el.style.boxShadow = `0 0 30px ${c.color}`;
+                                el.style.boxShadow = `0 0 50px ${c.color}`;
                                 el.style.zIndex = "100";
-                                showToast(`✨ TROVATO: ${c.name} (${c.rarity})!`, "success");
+                                // Aggiunta di una classe per animazione di "luccichio" invece del toast ingombrante
+                                el.classList.add('premium-reveal');
                                 document.querySelector('.modal-content').classList.add('pack-opening-active');
                                 setTimeout(() => document.querySelector('.modal-content').classList.remove('pack-opening-active'), 500);
                             }
@@ -956,7 +957,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        document.getElementById('join-battle-btn').disabled = currentBattleTeam.length < 5;
+        const isReady = currentBattleTeam.length >= 5;
+        document.getElementById('join-battle-btn').disabled = !isReady;
+        document.getElementById('create-private-btn').disabled = !isReady;
+        document.getElementById('join-private-btn').disabled = !isReady;
     }
 
     document.getElementById('auto-team-btn').onclick = () => {
@@ -965,6 +969,60 @@ document.addEventListener('DOMContentLoaded', () => {
         available.sort((a, b) => (CARDS.find(c => c.id == b).value) - (CARDS.find(c => c.id == a).value));
         currentBattleTeam = available.slice(0, 5).map(id => parseInt(id));
         renderArenaLobby();
+    };
+
+    document.getElementById('create-private-btn').onclick = async () => {
+        if (!auth?.currentUser) { showToast("Accedi per creare una sfida!", "danger"); return; }
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const myUid = auth.currentUser.uid;
+        
+        document.getElementById('private-room-info').textContent = "CODICE STANZA: " + code;
+        document.getElementById('create-private-btn').disabled = true;
+        
+        const roomRef = db.ref("privateRooms/" + code);
+        await roomRef.set({
+            p1: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam },
+            status: "waiting",
+            timestamp: Date.now()
+        });
+        
+        roomRef.on("value", (snap) => {
+            const room = snap.val();
+            if (room && room.status === "playing" && room.gameId) {
+                roomRef.off();
+                startBattle(room.gameId, "p1");
+            }
+        });
+        
+        roomRef.onDisconnect().remove();
+    };
+
+    document.getElementById('join-private-btn').onclick = async () => {
+        if (!auth?.currentUser) { showToast("Accedi per entrare nella sfida!", "danger"); return; }
+        const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+        if (!code) return;
+        
+        const roomRef = db.ref("privateRooms/" + code);
+        const snap = await roomRef.once("value");
+        const room = snap.val();
+        
+        if (!room) { showToast("Stanza non trovata!", "danger"); return; }
+        if (room.status !== "waiting") { showToast("Stanza piena o già iniziata!", "danger"); return; }
+        if (room.p1.uid === auth.currentUser.uid) { showToast("Sei già in questa stanza!", "danger"); return; }
+        
+        const gameId = "game_priv_" + Date.now();
+        const gameData = {
+            p1: { uid: room.p1.uid, email: room.p1.email, team: room.p1.team, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
+            p2: { uid: auth.currentUser.uid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
+            status: "playing",
+            turn: 1,
+            lastLog: "Sfida Privata Iniziata!",
+            timestamp: Date.now()
+        };
+        
+        await db.ref("games/" + gameId).set(gameData);
+        await roomRef.update({ status: "playing", gameId: gameId });
+        startBattle(gameId, "p2");
     };
 
     document.getElementById('join-battle-btn').onclick = async () => {
@@ -1175,7 +1233,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (battleState.status === "finished") {
-            db.ref("games/" + currentGameSession).off();
+            const rematchOverlay = document.getElementById('rematch-overlay');
+            rematchOverlay.classList.remove('hidden');
+            document.getElementById('rematch-title').textContent = battleState.lastLog;
             
             // Verifica ricompensa (se non ancora data per questa sessione)
             const sessionKey = "rewarded_" + currentGameSession;
@@ -1186,10 +1246,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem(sessionKey, "true");
             }
 
-            setTimeout(() => {
-                alert("Battaglia Conclusa: " + battleState.lastLog);
-                location.reload();
-            }, 2000);
+            // Gestione Rematch
+            const acceptBtn = document.getElementById('rematch-accept-btn');
+            const declineBtn = document.getElementById('rematch-decline-btn');
+            const statusEl = document.getElementById('rematch-status');
+            const timerEl = document.getElementById('rematch-timer');
+
+            if (battleState[myRole].rematch) {
+                acceptBtn.disabled = true;
+                statusEl.textContent = "Hai accettato la rivincita. In attesa dell'avversario...";
+            }
+
+            const oppRole = myRole === 'p1' ? 'p2' : 'p1';
+            if (battleState[oppRole].rematch) {
+                statusEl.textContent = "L'avversario chiede la rivincita!";
+            }
+
+            if (battleState.p1.rematch && battleState.p2.rematch) {
+                // RESET PARTITA
+                const gameId = currentGameSession;
+                if (myRole === 'p1') {
+                    db.ref("games/" + gameId).update({
+                        p1: { uid: battleState.p1.uid, email: battleState.p1.email, team: battleState.p1.team, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
+                        p2: { uid: battleState.p2.uid, email: battleState.p2.email, team: battleState.p2.team, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
+                        status: "playing",
+                        turn: 1,
+                        lastLog: "RIVINCITA INIZIATA!",
+                        timestamp: Date.now()
+                    });
+                }
+                rematchOverlay.classList.add('hidden');
+                acceptBtn.disabled = false;
+                statusEl.textContent = "";
+                return;
+            }
+
+            acceptBtn.onclick = () => {
+                db.ref(`games/${currentGameSession}/${myRole}`).update({ rematch: true });
+            };
+            declineBtn.onclick = () => location.reload();
+
+            // Countdown di 15 secondi
+            if (!window.rematchTimerInterval) {
+                let timeLeft = 15;
+                window.rematchTimerInterval = setInterval(() => {
+                    timeLeft--;
+                    timerEl.textContent = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(window.rematchTimerInterval);
+                        window.rematchTimerInterval = null;
+                        location.reload();
+                    }
+                }, 1000);
+            }
         }
     }
 

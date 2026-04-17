@@ -210,6 +210,18 @@
                         <button id="join-battle-btn" class="buy-btn" style="width: auto;" disabled>CERCA SFIDANTE</button>
                     </div>
 
+                    <div id="private-rooms" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 15px;">Sfida Privata (Codice)</h4>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button id="create-private-btn" class="buy-btn" style="width: auto; background: #475569;" disabled>CREA STANZA</button>
+                            <div style="display: flex; gap: 5px;">
+                                <input type="text" id="join-code-input" placeholder="Codice" maxlength="6" style="width: 100px; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; text-transform: uppercase;">
+                                <button id="join-private-btn" class="buy-btn" style="width: auto;" disabled>ENTRA</button>
+                            </div>
+                        </div>
+                        <div id="private-room-info" style="margin-top: 10px; font-weight: bold; color: var(--accent);"></div>
+                    </div>
+
                     <div class="trait-legend">
                         <div class="trait-item"><b>Rapido</b> <span>Batte Fisico(+1), Strat(+2)</span></div>
                         <div class="trait-item"><b>Fisico</b> <span>Batte Strat(+1), Dribbl(+2)</span></div>
@@ -260,6 +272,16 @@
                     <div id="vs-logo" style="font-size: 3rem; font-weight: 900; font-style: italic; opacity: 0.2;">VS</div>
                     <div id="player-played-card" class="played-card-slot"></div>
                     <div id="battle-log" style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"></div>
+                    
+                    <div id="rematch-overlay" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;">
+                        <h3 id="rematch-title">Sfida Conclusa!</h3>
+                        <div id="rematch-timer" style="font-size: 2rem; font-weight: bold; margin-bottom: 20px;">15</div>
+                        <div style="display: flex; gap: 20px;">
+                            <button id="rematch-accept-btn" class="buy-btn" style="width: auto; padding: 10px 30px;">RIVINCITA</button>
+                            <button id="rematch-decline-btn" class="buy-btn" style="width: auto; padding: 10px 30px; background: #475569;">ESCI</button>
+                        </div>
+                        <div id="rematch-status" style="margin-top: 15px; color: var(--accent);"></div>
+                    </div>
                 </div>
 
                 <div id="player-hand-container">
