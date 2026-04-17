@@ -28,9 +28,11 @@
                     <span id="user-info" style="font-size: 0.9rem; color: #22c55e; font-weight: bold;"></span> 
                     <button id="google-logout" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">Logout</button> 
                 </div> 
-                <span>Locale:</span> 
-                <select id="user-select" style="background: #1e293b; color: white; border: 1px solid #334155; border-radius: 6px; padding: 2px 5px;"></select> 
-                <button id="new-user" title="Nuovo Account" style="background: #334155; color: white; border: none; width: 24px; height: 24px; border-radius: 4px; cursor: pointer;">+</button> 
+                <div id="local-account-area" style="display: flex; align-items: center; gap: 5px;">
+                    <span>Locale:</span> 
+                    <select id="user-select" style="background: #1e293b; color: white; border: 1px solid #334155; border-radius: 6px; padding: 2px 5px;"></select> 
+                    <button id="new-user" title="Nuovo Account" style="background: #334155; color: white; border: none; width: 24px; height: 24px; border-radius: 4px; cursor: pointer;">+</button> 
+                </div>
             </div> 
             <nav> 
                 <button id="show-shop">
@@ -111,7 +113,7 @@
                             <li><b>Energia:</b> Inizi con 10. Chi perde lo scontro ne recupera di più (+3) per rimontare.</li>
                             <li><b>Passo:</b> Passare il turno dà +2 Energia, ma sei vulnerabile.</li>
                             <li><b>Uso Singolo:</b> Ogni carta del tuo team può essere giocata <b>una sola volta</b> per partita!</li>
-                            <li><b>Elite:</b> Le carte Elite hanno +1 Forza base.</li>
+                            <li><b>Elite (Fusione):</b> Fondi 3 doppioni per ottenere una carta Elite. Le carte Elite hanno <b>+1 Forza permanente</b> in Arena.</li>
                         </ul>
                     </div>
                 </div>

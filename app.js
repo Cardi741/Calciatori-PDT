@@ -141,7 +141,7 @@ async function saveState() {
     localStorage.setItem('tcg_users', JSON.stringify(users)); 
     localStorage.setItem('tcg_last_user', currentUser); 
     
-    if (auth && auth.currentUser && users[currentUser] && db) { 
+    if (auth && auth.currentUser && users[currentUser] && db && currentUser === auth.currentUser.email) { 
         const data = {...users[currentUser]}; 
         data.email = auth.currentUser.email; 
         
@@ -290,17 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (qty !== null) div.innerHTML += `<div class="quantity">x${displayQty}</div>`; 
         
-        if (displayQty >= 3 && !isElite) {
-            const fbtn = document.createElement('button'); fbtn.className = 'buy-btn'; fbtn.style.marginBottom = "5px"; fbtn.textContent = "FONDI (3x)";
-            fbtn.onclick = (e) => { 
-                e.stopPropagation(); 
-                users[currentUser].collection[card.id] = (users[currentUser].collection[card.id] - 3) + 1001; 
-                showToast("FUSIONE! Carta potenziata in ELITE", "success"); 
-                saveState(); updateUI(); 
-            };
-            div.appendChild(fbtn);
-        }
-
         if (displayQty > 1 || (isElite && displayQty > 1)) { 
             const btn = document.createElement('button'); btn.className = 'sell-btn'; btn.textContent = `Svincola (${Math.floor(card.value*0.2)})`; 
             btn.onclick = (e) => { 
@@ -312,6 +301,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }; 
             div.appendChild(btn); 
         } 
+
+        if (displayQty >= 3 && !isElite) {
+            const fbtn = document.createElement('button'); fbtn.className = 'buy-btn'; fbtn.style.marginBottom = "5px"; fbtn.textContent = "FONDI (3x)";
+            fbtn.onclick = (e) => { 
+                e.stopPropagation(); 
+                users[currentUser].collection[card.id] = (users[currentUser].collection[card.id] - 3) + 1001; 
+                showToast("FUSIONE! Carta potenziata in ELITE", "success"); 
+                saveState(); updateUI(); 
+            };
+            div.appendChild(fbtn);
+        }
         div.onclick = () => { zoomContainer.innerHTML = ''; const zc = div.cloneNode(true); zc.querySelector('.sell-btn')?.remove(); zoomContainer.appendChild(zc); zoomOverlay.classList.remove('hidden'); }; 
         return div; 
     } 
@@ -352,8 +352,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         res.forEach((c, i) => setTimeout(() => { 
                             const el = renderCard(c); 
                             el.classList.add('reveal-animation'); 
+                            
+                            // Effetto speciale per carte Rare/Mythic
+                            if (c.rarity === "Legendary" || c.rarity === "Mythic") {
+                                el.style.boxShadow = `0 0 30px ${c.color}`;
+                                el.style.zIndex = "100";
+                                showToast(`✨ TROVATO: ${c.name} (${c.rarity})!`, "success");
+                                document.querySelector('.modal-content').classList.add('pack-opening-active');
+                                setTimeout(() => document.querySelector('.modal-content').classList.remove('pack-opening-active'), 500);
+                            }
+
                             grid.appendChild(el); 
-                            // Suono o feedback tattile qui se possibile
                         }, i*600)); 
                         setTimeout(() => document.getElementById('close-pack-btn').classList.remove('hidden'), 3500); 
                         updateUI(); 
@@ -745,6 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // SESSIONE GOOGLE
             document.getElementById('google-login').classList.add('hidden'); 
             document.getElementById('user-logged-in').classList.remove('hidden'); 
+            document.getElementById('local-account-area').classList.add('hidden');
             document.getElementById('user-info').textContent = u.displayName; 
             document.getElementById('p2p-trading').classList.remove('hidden');
             
@@ -775,6 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // SESSIONE LOCALE
             document.getElementById('google-login').classList.remove('hidden'); 
             document.getElementById('user-logged-in').classList.add('hidden'); 
+            document.getElementById('local-account-area').classList.remove('hidden');
             document.getElementById('p2p-trading').classList.add('hidden');
             const last = localStorage.getItem('tcg_last_user');
             currentUser = (last && users[last]) ? last : "Default";
@@ -1383,7 +1394,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!allUsers) return;
 
             const players = Object.values(allUsers)
-                .filter(u => u.gamesPlayed > 0)
+                .filter(u => (u.trophies || 0) > 0)
                 .sort((a, b) => (b.trophies || 0) - (a.trophies || 0))
                 .slice(0, 100);
 
@@ -1436,6 +1447,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * 1. Vai su https://developer.paypal.com/ e crea una "Live App".
      * 2. Copia il tuo "Client ID" reale.
      * 3. Nel file index.html, sostituisci "client-id=sb" con "client-id=IL_TUO_ID_REALE".
+     * 
+     * Dati per il setup Live (Daniele Cardinali):
+     * Email PayPal: danielecardinali0@gmail.com
+     * Telefono: 3314990991
      */
     function initPayPalButtons() {
         const packs = [
