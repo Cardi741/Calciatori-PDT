@@ -1012,8 +1012,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const gameId = "game_priv_" + Date.now();
         const gameData = {
-            p1: { uid: room.p1.uid, email: room.p1.email, team: room.p1.team, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
-            p2: { uid: auth.currentUser.uid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
+            p1: { uid: room.p1.uid, email: room.p1.email, team: room.p1.team, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
+            p2: { uid: auth.currentUser.uid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
             status: "playing",
             turn: 1,
             lastLog: "Sfida Privata Iniziata!",
@@ -1053,8 +1053,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const opponent = waiting[oppId];
                 const gameId = "game_" + now;
                 const gameData = {
-                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
-                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
+                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
+                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
                     status: "playing",
                     turn: 1,
                     lastLog: "Battaglia Iniziata!",
@@ -1168,13 +1168,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const hand = document.getElementById('player-hand');
         hand.innerHTML = '';
-        const usedCards = me.usedCards || [];
+        const cooldowns = me.cooldowns || {};
         
         me.team.forEach(cardId => {
-            if (usedCards.includes(cardId)) return; // Nascondi carte già usate
+            const lastTurn = cooldowns[cardId] || -100;
+            const turnsSinceUse = battleState.turn - lastTurn;
+            const onCooldown = turnsSinceUse <= 2;
 
             const card = CARDS.find(c => c.id == cardId);
             const el = renderCard(card);
+            if (onCooldown) {
+                el.style.filter = "grayscale(1) brightness(0.5)";
+                el.style.cursor = "not-allowed";
+            }
             const cost = getCardCost(card, me);
             
             const actionArea = document.createElement('div');
@@ -1186,7 +1192,7 @@ document.addEventListener('DOMContentLoaded', () => {
             playBtn.style.padding = "0.4rem 1rem";
             playBtn.textContent = "GIOCA";
             
-            if (me.energy >= cost && !me.move) {
+            if (me.energy >= cost && !me.move && !onCooldown) {
                 playBtn.onclick = (e) => {
                     e.stopPropagation();
                     playBtn.disabled = true;
@@ -1201,7 +1207,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 playBtn.disabled = true;
                 playBtn.style.opacity = "0.5";
-                if (me.move) playBtn.textContent = "ATTENDI";
+                if (onCooldown) playBtn.textContent = `BLOCK (${3 - turnsSinceUse})`;
+                else if (me.move) playBtn.textContent = "ATTENDI";
                 else playBtn.textContent = "NO⚡";
             }
             
@@ -1267,8 +1274,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const gameId = currentGameSession;
                 if (myRole === 'p1') {
                     db.ref("games/" + gameId).update({
-                        p1: { uid: battleState.p1.uid, email: battleState.p1.email, team: battleState.p1.team, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
-                        p2: { uid: battleState.p2.uid, email: battleState.p2.email, team: battleState.p2.team, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
+                        p1: { uid: battleState.p1.uid, email: battleState.p1.email, team: battleState.p1.team, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
+                        p2: { uid: battleState.p2.uid, email: battleState.p2.email, team: battleState.p2.team, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
                         status: "playing",
                         turn: 1,
                         lastLog: "RIVINCITA INIZIATA!",
@@ -1421,14 +1428,14 @@ document.addEventListener('DOMContentLoaded', () => {
         g.p1.hp -= d1;
         g.p2.hp -= d2;
 
-        // Add to used cards
+        // Gestione Cooldown (Blocco 2 turni)
         if (g.p1.move !== -1) {
-            if (!g.p1.usedCards) g.p1.usedCards = [];
-            g.p1.usedCards.push(g.p1.move);
+            if (!g.p1.cooldowns) g.p1.cooldowns = {};
+            g.p1.cooldowns[g.p1.move] = g.turn;
         }
         if (g.p2.move !== -1) {
-            if (!g.p2.usedCards) g.p2.usedCards = [];
-            g.p2.usedCards.push(g.p2.move);
+            if (!g.p2.cooldowns) g.p2.cooldowns = {};
+            g.p2.cooldowns[g.p2.move] = g.turn;
         }
 
         // Synergies End Turn
