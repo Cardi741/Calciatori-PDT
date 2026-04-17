@@ -65,6 +65,61 @@
         <div id="zoom-container"></div> 
     </div> 
 
+    <div id="tutorial-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close-modal" id="close-tutorial">&times;</span>
+            <div id="tutorial-content">
+                <h2 style="text-align: center; color: var(--accent); margin-bottom: 2rem;">📖 Guida di Gioco</h2>
+                
+                <div class="tutorial-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div class="tutorial-section">
+                        <h4>⚔️ Il Sistema di Ruoli (Sasso-Carta-Forbice)</h4>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary);">Ogni ruolo ha un vantaggio (+1 Forza) su un altro:</p>
+                        <ul style="font-size: 0.85rem; line-height: 1.8;">
+                            <li><b style="color: var(--mythic);">Attacco</b> batte <b style="color: var(--accent);">Supporto</b></li>
+                            <li><b style="color: var(--accent);">Supporto</b> batte <b style="color: #38bdf8;">Controllo</b></li>
+                            <li><b style="color: #38bdf8;">Controllo</b> batte <b style="color: var(--success);">Difesa</b></li>
+                            <li><b style="color: var(--success);">Difesa</b> batte <b style="color: var(--mythic);">Attacco</b></li>
+                        </ul>
+                    </div>
+
+                    <div class="tutorial-section">
+                        <h4>🛡️ Tratti e Contromisure</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary);">I tratti forniscono bonus di forza cumulativi (fino a +2):</p>
+                        <div style="font-size: 0.75rem; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px;">
+                            Rapido > Fisico (+1), Strat (+2)<br>
+                            Fisico > Strat (+1), Dribbl (+2)<br>
+                            Strat > Dribbl (+1), Lead (+2)<br>
+                            ...e così via per tutti gli 8 tratti!
+                        </div>
+                    </div>
+
+                    <div class="tutorial-section">
+                        <h4>✨ Abilità Speciali</h4>
+                        <ul style="font-size: 0.8rem;">
+                            <li><b>Pressing:</b> Annulla l'abilità dell'avversario.</li>
+                            <li><b>Muro:</b> Riduce i danni subiti di 1.</li>
+                            <li><b>Assist:</b> La prossima carta costa -1 Energia.</li>
+                            <li><b>Contropiede:</b> +2 Forza contro Attaccanti.</li>
+                            <li><b>Zona Cesarini:</b> +3 Forza se hai meno di 5 HP.</li>
+                        </ul>
+                    </div>
+
+                    <div class="tutorial-section">
+                        <h4>⚡ Regole Fondamentali</h4>
+                        <ul style="font-size: 0.8rem;">
+                            <li><b>Energia:</b> Inizi con 10. Chi perde lo scontro ne recupera di più (+3) per rimontare.</li>
+                            <li><b>Passo:</b> Passare il turno dà +2 Energia, ma sei vulnerabile.</li>
+                            <li><b>Uso Singolo:</b> Ogni carta del tuo team può essere giocata <b>una sola volta</b> per partita!</li>
+                            <li><b>Elite:</b> Le carte Elite hanno +1 Forza base.</li>
+                        </ul>
+                    </div>
+                </div>
+                <button class="buy-btn" id="tutorial-ok-btn" style="margin-top: 2rem;">HO CAPITO!</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container"></div>
  
     <main id="app-content"> 
@@ -82,6 +137,33 @@
         <section id="shop-view"> 
             <div class="view-header"><h2>🛒 Negozio Pacchetti</h2></div> 
             <div class="pack-container"></div> 
+
+            <div id="credit-shop" style="margin-top: 4rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 3rem;">
+                <h2 style="margin-bottom: 2rem;">💎 Acquista Crediti</h2>
+                <div class="credit-packs-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                    <div class="pack credit-pack">
+                        <h3>1.000 Crediti</h3>
+                        <p>€1,99</p>
+                        <div id="paypal-button-1000"></div>
+                    </div>
+                    <div class="pack credit-pack">
+                        <h3>5.000 Crediti</h3>
+                        <p style="color: var(--accent);">€7,99</p>
+                        <div id="paypal-button-5000"></div>
+                    </div>
+                    <div class="pack credit-pack">
+                        <h3>15.000 Crediti</h3>
+                        <p style="color: var(--success);">€19,99</p>
+                        <div id="paypal-button-15000"></div>
+                    </div>
+                    <div class="pack credit-pack" style="border-color: var(--mythic);">
+                        <h3>50.000 Crediti</h3>
+                        <p style="color: var(--mythic);">€49,99</p>
+                        <div id="paypal-button-50000"></div>
+                    </div>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); text-align: center; margin-top: 20px;">Pagamenti sicuri elaborati tramite PayPal. I crediti verranno aggiunti istantaneamente.</p>
+            </div>
         </section> 
  
         <section id="mercato-view" class="hidden"> 
@@ -104,7 +186,13 @@
         </section> 
  
         <section id="arena-view" class="hidden">
-            <div class="view-header"><h2>⚔️ Arena della Battaglia</h2></div>
+            <div class="view-header">
+                <h2>⚔️ Arena della Battaglia</h2>
+                <button id="open-tutorial-btn" style="background: rgba(255,255,255,0.05); border: 1px solid var(--accent); color: var(--accent); padding: 8px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    GUIDA DI GIOCO
+                </button>
+            </div>
             
             <div id="arena-lobby">
                 <div class="lobby-card" style="max-width: 700px; margin: 0 auto; background: rgba(255,255,255,0.02); padding: 2rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); text-align: center;">
@@ -152,6 +240,7 @@
                         <div class="energy-pips" id="opp-energy"></div>
                     </div>
                     <div class="turn-info" style="text-align: center;">
+                        <button id="open-tutorial-battle-btn" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; margin-bottom: 10px; cursor: pointer;">Come si gioca?</button>
                         <div id="turn-counter" style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">TURNO 1/10</div>
                         <div id="battle-timer" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 10px;">In attesa mosse...</div>
                         <button id="forfeit-battle-btn" style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 0.7rem; font-weight: bold;">ABBANDONA</button>
@@ -259,6 +348,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script> 
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script> 
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script> 
+    <script src="https://www.paypal.com/sdk/js?client-id=sb&currency=EUR"></script> 
     <script src="app.js"></script> 
 </body> 
 </html>

@@ -807,6 +807,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('show-leaderboard').onclick = () => showView('leaderboard-view');
     document.getElementById('show-trade').onclick = () => showView('trade-view'); 
 
+    const tutModal = document.getElementById('tutorial-modal');
+    const openTut = () => tutModal.classList.remove('hidden');
+    const closeTut = () => tutModal.classList.add('hidden');
+
+    document.getElementById('open-tutorial-btn').onclick = openTut;
+    document.getElementById('open-tutorial-battle-btn').onclick = openTut;
+    document.getElementById('close-tutorial').onclick = closeTut;
+    document.getElementById('tutorial-ok-btn').onclick = closeTut;
+
     document.getElementById('forfeit-battle-btn').onclick = async () => {
         if (!currentGameSession) return;
         if (confirm("Vuoi davvero abbandonare la partita? Verrà contata come sconfitta.")) {
@@ -937,8 +946,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const opponent = waiting[oppId];
                 const gameId = "game_" + now;
                 const gameData = {
-                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 10, move: null, nextCostMod: 0 },
-                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 10, move: null, nextCostMod: 0 },
+                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
+                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 10, move: null, nextCostMod: 0, usedCards: [] },
                     status: "playing",
                     turn: 1,
                     lastLog: "Battaglia Iniziata!",
@@ -1052,7 +1061,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const hand = document.getElementById('player-hand');
         hand.innerHTML = '';
+        const usedCards = me.usedCards || [];
+        
         me.team.forEach(cardId => {
+            if (usedCards.includes(cardId)) return; // Nascondi carte già usate
+
             const card = CARDS.find(c => c.id == cardId);
             const el = renderCard(card);
             const cost = getCardCost(card, me);
@@ -1250,6 +1263,16 @@ document.addEventListener('DOMContentLoaded', () => {
         g.p1.hp -= d1;
         g.p2.hp -= d2;
 
+        // Add to used cards
+        if (g.p1.move !== -1) {
+            if (!g.p1.usedCards) g.p1.usedCards = [];
+            g.p1.usedCards.push(g.p1.move);
+        }
+        if (g.p2.move !== -1) {
+            if (!g.p2.usedCards) g.p2.usedCards = [];
+            g.p2.usedCards.push(g.p2.move);
+        }
+
         // Synergies End Turn
         if (syn1.regenHp) g.p1.hp = Math.min(20, g.p1.hp + syn1.regenHp);
         if (syn2.regenHp) g.p2.hp = Math.min(20, g.p2.hp + syn2.regenHp);
@@ -1368,9 +1391,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function initPayPalButtons() {
+        const packs = [
+            { id: 1000, amount: '1.99', credits: 1000 },
+            { id: 5000, amount: '7.99', credits: 5000 },
+            { id: 15000, amount: '19.99', credits: 15000 },
+            { id: 50000, amount: '49.99', credits: 50000 }
+        ];
+
+        packs.forEach(pack => {
+            if (document.getElementById(`paypal-button-${pack.id}`)) {
+                paypal.Buttons({
+                    style: { layout: 'vertical', color: 'blue', shape: 'rect', label: 'pay', height: 40 },
+                    createOrder: (data, actions) => {
+                        return actions.order.create({
+                            purchase_units: [{
+                                description: `${pack.credits} Crediti per Calciatori TCG`,
+                                amount: { currency_code: 'EUR', value: pack.amount }
+                            }]
+                        });
+                    },
+                    onApprove: (data, actions) => {
+                        return actions.order.capture().then(details => {
+                            users[currentUser].credits += pack.credits;
+                            saveState();
+                            updateUI();
+                            showToast(`Acquisto completato! +${pack.credits} Crediti aggiunti.`, "success");
+                        });
+                    },
+                    onError: (err) => {
+                        console.error('PayPal Error:', err);
+                        showToast("Errore nel pagamento. Riprova.", "danger");
+                    }
+                }).render(`#paypal-button-${pack.id}`);
+            }
+        });
+    }
+
     loadState().then(() => {
         updateAccountList();
         updateUI();
+        initPayPalButtons();
     }); 
 }); 
  
