@@ -760,3 +760,214 @@ main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
 .player-name { font-weight: 600; }
 .trophy-count { color: #facc15; font-weight: 700; }
 .games-count { color: var(--text-secondary); font-size: 0.9rem; }
+
+/* Battle 3-Zone System Styles */
+#battle-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #0f172a;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+}
+
+.battle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.05);
+    padding: 1rem 2rem;
+    border-radius: 15px;
+    margin-bottom: 1rem;
+}
+
+.player-info-mini {
+    display: flex;
+    flex-direction: column;
+    font-weight: 800;
+}
+
+.energy-indicator {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    margin-top: 4px;
+}
+
+.battle-center-info {
+    text-align: center;
+}
+
+#turn-counter {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--accent);
+}
+
+#battle-log {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+#battle-field {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    padding: 10px;
+    perspective: 1000px;
+}
+
+.battle-zone {
+    background: rgba(255,255,255,0.02);
+    border: 2px solid rgba(255,255,255,0.05);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    position: relative;
+    transition: all 0.3s;
+}
+
+.battle-zone:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(255,255,255,0.1);
+}
+
+.zone-name {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 900;
+    font-size: 2rem;
+    opacity: 0.05;
+    pointer-events: none;
+    letter-spacing: 5px;
+}
+
+.slots-half {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 8px;
+    flex-grow: 1;
+}
+
+.slots-half.opp { border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px; }
+.slots-half.player { padding-top: 5px; }
+
+.zone-power-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 0;
+    z-index: 5;
+}
+
+.power-val {
+    font-size: 1.5rem;
+    font-weight: 900;
+    text-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+.power-val.opp { color: var(--danger); }
+.power-val.player { color: var(--success); }
+
+.zone-icon {
+    font-size: 1.2rem;
+    background: #1e293b;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.1);
+}
+
+.mini-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 4px;
+    text-align: center;
+    position: relative;
+    font-size: 0.65rem;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.mini-card.filler {
+    background: rgba(255,255,255,0.05);
+    border-style: dashed;
+    border-color: rgba(255,255,255,0.1);
+}
+
+.mini-card.filler::after {
+    content: "SLOT";
+    opacity: 0.2;
+    font-size: 0.5rem;
+}
+
+.mini-power {
+    font-weight: 900;
+    font-size: 0.9rem;
+    color: var(--accent);
+}
+
+.mini-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.7;
+    font-size: 0.55rem;
+}
+
+#battle-controls {
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.selected-for-move {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 20px var(--accent) !important;
+    transform: scale(1.05) translateY(-5px);
+    z-index: 100;
+}
+
+#rematch-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.95);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+}

@@ -225,6 +225,49 @@ document.addEventListener('DOMContentLoaded', () => {
     const cardPicker = document.getElementById('card-picker-grid'); 
     const requestPicker = document.getElementById('request-picker-grid');
  
+    function renderMiniCard(card, currentPower) {
+        const div = document.createElement('div');
+        div.className = `mini-card rarity-${card.rarity.toLowerCase()}`;
+        div.style.borderColor = card.color;
+        div.innerHTML = `<div class="mini-power">${currentPower}</div><div class="mini-name">${card.name.split(' ')[0]}</div>`;
+        return div;
+    }
+
+    function calculateZonePower(state, role, zone) {
+        const p = state[role];
+        const opp = state[role === 'p1' ? 'p2' : 'p1'];
+        const zones = ['sinistra', 'centro', 'destra'];
+        let total = 0;
+        p.zones[zone].forEach(cObj => {
+            if (cObj.id === "slot_filler") return;
+            const card = CARDS.find(x => x.id == cObj.id);
+            if (!card) return;
+            let pwr = cObj.power;
+            if (card.role === "attacco" && p.zones[zone].length < opp.zones[zone].length) pwr += 1;
+            if (card.role === "supporto") pwr += (p.zones[zone].length - 1);
+            if (card.ability.type === "passive") {
+                if (card.ability.effect === "+1 per ogni carta supporto nel campo") {
+                    let supportCount = 0;
+                    zones.forEach(z => { [state.p1, state.p2].forEach(pl => { pl.zones[z].forEach(co => { if (co.id !== "slot_filler" && CARDS.find(x => x.id == co.id).role === "supporto") supportCount++; }); }); });
+                    pwr += supportCount;
+                }
+                if (card.ability.effect === "+2 se sei dietro in almeno 2 zone") {
+                    let losingZones = 0;
+                    zones.forEach(z => { if (p.zones[z].length < opp.zones[z].length) losingZones++; });
+                    if (losingZones >= 2) pwr += 2;
+                }
+            }
+            if (card.ability.type === "ongoing") {
+                if (card.ability.effect === "+1 per ogni carta nella zona") pwr += (p.zones[zone].length + opp.zones[zone].length);
+                if (card.ability.effect === "se sei in vantaggio → +2") { if (p.zones[zone].length > opp.zones[zone].length) pwr += 2; }
+            }
+            opp.zones[zone].forEach(oObj => { if (oObj.id !== "slot_filler") { const oCard = CARDS.find(x => x.id == oObj.id); if (oCard.ability.type === "ongoing" && oCard.ability.effect === "tutte le carte avversarie qui -1") { if (card.ability.effect !== "questa carta non può essere ridotta") pwr -= 1; } } });
+            total += pwr;
+        });
+        p.zones[zone].forEach(cObj => { if (cObj.id !== "slot_filler") { const card = CARDS.find(x => x.id == cObj.id); if (card.ability.type === "ongoing" && card.ability.effect === "tutti i tuoi attaccanti qui +1") { p.zones[zone].forEach(other => { if (other.id !== "slot_filler" && CARDS.find(x => x.id == other.id).role === "attacco") total += 1; }); } } });
+        return total;
+    }
+
     function updateUI() { 
         if (!users[currentUser]) {
             users[currentUser] = { credits: INITIAL_CREDITS, collection: {}, trophies: 0, gamesPlayed: 0, lastDailyBonus: 0 };
@@ -913,20 +956,20 @@ document.addEventListener('DOMContentLoaded', () => {
             teamSelector.appendChild(el);
         });
 
-        // Visualizzazione Sinergie Attive nel Lobby
+        // Info team nel lobby
         if (currentBattleTeam.length > 0) {
-            const syn = getSynergies(currentBattleTeam);
-            const synDiv = document.createElement('div');
-            synDiv.style.marginTop = "15px";
-            synDiv.innerHTML = `
-                <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 5px; color: var(--text-secondary);">Sinergie Attive:</div>
-                ${syn.regenHp ? '<span class="synergy-indicator">💚 Difesa (Regen HP)</span>' : ''}
-                ${syn.allForce ? '<span class="synergy-indicator">⚔️ Supporto (+1 Forza)</span>' : ''}
-                ${syn.stealEnergy ? '<span class="synergy-indicator">⚡ Controllo (Ruba Energia)</span>' : ''}
-                ${syn.attackForce ? '<span class="synergy-indicator">🔥 Attacco (+1 Attacco)</span>' : ''}
-                ${(!syn.regenHp && !syn.allForce && !syn.stealEnergy && !syn.attackForce) ? '<span style="font-size: 0.7rem; opacity: 0.5;">Nessuna sinergia attiva</span>' : ''}
+            const statsDiv = document.createElement('div');
+            statsDiv.style.marginTop = "15px";
+            let totalPower = 0, totalCost = 0;
+            currentBattleTeam.forEach(id => {
+                const c = CARDS.find(x => x.id == id);
+                if (c) { totalPower += c.power; totalCost += c.cost; }
+            });
+            statsDiv.innerHTML = `
+                <div style="font-size: 0.8rem; font-weight: bold; color: var(--accent);">STATISTICHE TEAM:</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">Potere Totale: ${totalPower} | Costo Medio: ${(totalCost/5).toFixed(1)}</div>
             `;
-            teamSelector.appendChild(synDiv);
+            teamSelector.appendChild(statsDiv);
         }
 
         const picker = document.getElementById('team-picker-grid');
@@ -1012,8 +1055,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const gameId = "game_priv_" + Date.now();
         const gameData = {
-            p1: { uid: room.p1.uid, email: room.p1.email, team: room.p1.team, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
-            p2: { uid: auth.currentUser.uid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
+            p1: { uid: room.p1.uid, email: room.p1.email, team: room.p1.team, energy: 1, zones: { sinistra: [], centro: [], destra: [] }, move: null },
+            p2: { uid: auth.currentUser.uid, email: auth.currentUser.email, team: currentBattleTeam, energy: 1, zones: { sinistra: [], centro: [], destra: [] }, move: null },
             status: "playing",
             turn: 1,
             lastLog: "Sfida Privata Iniziata!",
@@ -1053,8 +1096,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const opponent = waiting[oppId];
                 const gameId = "game_" + now;
                 const gameData = {
-                    p1: { uid: oppId, email: opponent.email, team: opponent.team, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
-                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
+                    p1: { uid: oppId, email: opponent.email, team: opponent.team, energy: 1, zones: { sinistra: [], centro: [], destra: [] }, move: null },
+                    p2: { uid: myUid, email: auth.currentUser.email, team: currentBattleTeam, energy: 1, zones: { sinistra: [], centro: [], destra: [] }, move: null },
                     status: "playing",
                     turn: 1,
                     lastLog: "Battaglia Iniziata!",
@@ -1093,400 +1136,263 @@ document.addEventListener('DOMContentLoaded', () => {
         currentGameSession = gameId;
         document.getElementById('arena-lobby').classList.add('hidden');
         document.getElementById('battle-overlay').classList.remove('hidden');
-        document.getElementById('matchmaking-status').classList.add('hidden');
-        
-        // Pulizia automatica se usciamo durante il gioco
-        db.ref(`games/${gameId}`).onDisconnect().update({
-            status: 'finished',
-            lastLog: "Un giocatore si è disconnesso."
-        });
-
+        db.ref(`games/${gameId}`).onDisconnect().update({ status: 'finished', lastLog: "Avversario disconnesso." });
         db.ref("games/" + gameId).on("value", (snap) => {
             const game = snap.val();
             if (!game) return;
             battleState = game;
             updateBattleUI(role);
-            
-            // Entrambi hanno mosso? Risolvi il turno.
-            // Usiamo un controllo sul turno per evitare doppie risoluzioni
-            if (game.p1.move && game.p2.move && game.status === 'playing') {
-                // Solo un giocatore (p1) o chi arriva per primo tenta la risoluzione atomica
-                if (role === 'p1') resolveTurn(gameId);
-            }
+            if (game.p1.move && game.p2.move && game.status === 'playing' && role === 'p1') resolveTurn(gameId);
         });
     }
 
     function updateBattleUI(myRole) {
         const me = battleState[myRole];
         const opp = battleState[myRole === 'p1' ? 'p2' : 'p1'];
-        const user = users[currentUser];
-
-        const passBtn = document.getElementById('pass-turn-btn');
-        if (me.move) {
-            passBtn.disabled = true;
-            passBtn.style.opacity = "0.5";
-        } else {
-            passBtn.disabled = false;
-            passBtn.style.opacity = "1";
-            passBtn.onclick = () => {
-                if (confirm("Vuoi passare il turno? Recupererai +2 Energia ma subirai danni diretti se l'avversario gioca una carta.")) {
-                    db.ref(`games/${currentGameSession}/${myRole}`).update({
-                        move: -1
-                    });
-                }
-            };
-        }
-
         document.getElementById('player-name').textContent = me.email.split('@')[0];
         document.getElementById('opp-name').textContent = opp.email.split('@')[0];
-        
-        document.getElementById('player-hp-text').textContent = `${me.hp}/20 HP`;
-        document.getElementById('player-hp-bar').style.width = (me.hp / 20 * 100) + "%";
-        
-        document.getElementById('opp-hp-text').textContent = `${opp.hp}/20 HP`;
-        document.getElementById('opp-hp-bar').style.width = (opp.hp / 20 * 100) + "%";
-
-        renderEnergy('player-energy', me.energy);
-        renderEnergy('opp-energy', opp.energy);
-        
-        const synMe = getSynergies(me.team);
-        const synOpp = getSynergies(opp.team);
-
-        // Nuova info testuale energia e sinergie
-        document.getElementById('battle-timer').innerHTML = `
-            <div style="font-weight:bold; color: #3b82f6;">TUA ENERGIA: ${me.energy}/10⚡</div>
-            <div style="font-size: 0.7rem; color: #22c55e;">
-                ${synMe.regenHp ? '💚 REGRENERAZIONE' : ''} 
-                ${synMe.stealEnergy ? '⚡ FURTO ENERGIA' : ''}
-                ${synMe.allForce ? '⚔️ BONUS SQUADRA' : ''}
-            </div>
-            <div style="font-size: 0.8rem; opacity: 0.7; margin-top:5px;">Energia Avversaria: ${opp.energy}/10⚡</div>
-        `;
-
-        document.getElementById('turn-counter').textContent = `TURNO ${battleState.turn}/10`;
+        document.getElementById('turn-counter').textContent = `TURNO ${battleState.turn}/6`;
+        document.getElementById('player-energy-text').textContent = `⚡ ${me.energy}`;
+        document.getElementById('opp-energy-text').textContent = `⚡ ${opp.energy}`;
         document.getElementById('battle-log').textContent = battleState.lastLog;
+
+        const zones = ['sinistra', 'centro', 'destra'];
+        zones.forEach(z => {
+            const pPow = calculateZonePower(battleState, myRole, z);
+            const oPow = calculateZonePower(battleState, myRole==='p1'?'p2':'p1', z);
+            document.getElementById(`player-power-${z}`).textContent = pPow;
+            document.getElementById(`opp-power-${z}`).textContent = oPow;
+            
+            const pSlots = document.getElementById(`player-slots-${z}`);
+            const oSlots = document.getElementById(`opp-slots-${z}`);
+            pSlots.innerHTML = ''; oSlots.innerHTML = '';
+            
+            me.zones[z].forEach(cObj => {
+                if (cObj.id === "slot_filler") {
+                    const filler = document.createElement('div'); filler.className = "mini-card filler"; pSlots.appendChild(filler);
+                } else {
+                    pSlots.appendChild(renderMiniCard(CARDS.find(x => x.id == cObj.id), cObj.power));
+                }
+            });
+            opp.zones[z].forEach(cObj => {
+                if (cObj.id === "slot_filler") {
+                    const filler = document.createElement('div'); filler.className = "mini-card filler"; oSlots.appendChild(filler);
+                } else {
+                    oSlots.appendChild(renderMiniCard(CARDS.find(x => x.id == cObj.id), cObj.power));
+                }
+            });
+
+            const zoneEl = document.getElementById(`zone-${z}`);
+            if (!me.move) {
+                zoneEl.onclick = () => {
+                    const selected = document.querySelector('.card.selected-for-move');
+                    if (selected) {
+                        const cid = selected.dataset.id;
+                        const card = CARDS.find(x => x.id == cid);
+                        if (battleState.blockedZones && battleState.blockedZones.includes(z)) {
+                            showToast("Zona BLOCCATA per questo turno!", "danger");
+                            return;
+                        }
+                        let slotsToOccupied = 1;
+                        if (card.ability.type === "ongoing" && card.ability.effect === "questa carta occupa 2 slot") slotsToOccupied = 2;
+
+                        if (me.zones[z].length + currentMoves.filter(m => m.zone === z).length + slotsToOccupied <= 4) {
+                            currentMoves.push({ id: cid, zone: z });
+                            currentEnergyLeft -= card.cost;
+                            updateBattleUI(myRole);
+                        } else { showToast("Zona piena!", "danger"); }
+                    }
+                };
+            }
+        });
 
         const hand = document.getElementById('player-hand');
         hand.innerHTML = '';
-        const cooldowns = me.cooldowns || {};
+        const playedIds = [...me.zones.sinistra, ...me.zones.centro, ...me.zones.destra].map(c => c.id).concat(currentMoves.map(m => m.id));
         
-        me.team.forEach(cardId => {
-            const lastTurn = cooldowns[cardId] || -100;
-            const turnsSinceUse = battleState.turn - lastTurn;
-            const onCooldown = turnsSinceUse <= 2;
+        if (currentMoves.length === 0) currentEnergyLeft = me.energy;
 
-            const card = CARDS.find(c => c.id == cardId);
+        // Calculate cost discount from passives on board
+        let costModifier = 0;
+        zones.forEach(z => {
+            me.zones[z].forEach(cObj => {
+                const c = CARDS.find(x => x.id == cObj.id);
+                if (c && c.ability && c.ability.type === "passive" && c.ability.effect === "riduce costo della prossima carta di 1") costModifier++;
+            });
+        });
+
+        me.team.forEach(cid => {
+            if (playedIds.includes(cid.toString())) return;
+            const card = CARDS.find(x => x.id == cid);
+            const effectiveCost = Math.max(1, card.cost - costModifier);
             const el = renderCard(card);
-            if (onCooldown) {
-                el.style.filter = "grayscale(1) brightness(0.5)";
-                el.style.cursor = "not-allowed";
-            }
-            const cost = getCardCost(card, me);
+            el.dataset.id = cid;
             
-            const actionArea = document.createElement('div');
-            actionArea.style.marginTop = "8px";
-            actionArea.innerHTML = `<div style="font-weight:bold; color:#3b82f6; margin-bottom:5px;">${cost}⚡ Energia</div>`;
-            
-            const playBtn = document.createElement('button');
-            playBtn.className = 'buy-btn';
-            playBtn.style.padding = "0.4rem 1rem";
-            playBtn.textContent = "GIOCA";
-            
-            if (me.energy >= cost && !me.move && !onCooldown) {
-                playBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    playBtn.disabled = true;
-                    playBtn.textContent = "...";
-                    const isElite = (user.collection[cardId] >= 1000);
-                    db.ref(`games/${currentGameSession}/${myRole}`).update({
-                        move: cardId,
-                        moveElite: isElite,
-                        energy: me.energy - cost
-                    });
-                };
+            if (effectiveCost > currentEnergyLeft || me.move) {
+                el.style.opacity = "0.5";
+                el.style.filter = "grayscale(1)";
             } else {
-                playBtn.disabled = true;
-                playBtn.style.opacity = "0.5";
-                if (onCooldown) playBtn.textContent = `BLOCK (${3 - turnsSinceUse})`;
-                else if (me.move) playBtn.textContent = "ATTENDI";
-                else playBtn.textContent = "NO⚡";
+                el.onclick = () => {
+                    document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-for-move'));
+                    el.classList.add('selected-for-move');
+                };
             }
-            
-            actionArea.appendChild(playBtn);
-            el.appendChild(actionArea);
             hand.appendChild(el);
         });
 
-        if (me.move) {
-            if (me.move === -1) {
-                document.getElementById('player-played-card').innerHTML = '<div class="card" style="border-color:#475569; display:flex; align-items:center; justify-content:center;"><h4>TURNO PASSATO</h4></div>';
-            } else {
-                const card = CARDS.find(c => c.id == me.move);
-                document.getElementById('player-played-card').innerHTML = '';
-                document.getElementById('player-played-card').appendChild(renderCard(card));
-            }
-        } else {
-            document.getElementById('player-played-card').innerHTML = 'Scegli una carta...';
-        }
+        const endBtn = document.getElementById('end-turn-btn');
+        endBtn.disabled = !!me.move;
+        endBtn.onclick = () => {
+            db.ref(`games/${currentGameSession}/${myRole}`).update({ move: currentMoves.length > 0 ? currentMoves : -1 });
+            currentMoves = [];
+        };
 
-        if (opp.move) {
-            if (opp.move === -1) {
-                document.getElementById('opp-played-card').innerHTML = '<div class="card" style="border-color:#475569; display:flex; align-items:center; justify-content:center;"><h4>TURNO PASSATO</h4></div>';
-            } else {
-                document.getElementById('opp-played-card').innerHTML = '<div class="card" style="height:100%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05);"><h4>CARTA PRONTA</h4></div>';
-            }
-        } else {
-            document.getElementById('opp-played-card').innerHTML = 'In attesa...';
-        }
+        document.getElementById('cancel-moves-btn').onclick = () => {
+            currentMoves = [];
+            currentEnergyLeft = me.energy;
+            updateBattleUI(myRole);
+        };
 
         if (battleState.status === "finished") {
-            const rematchOverlay = document.getElementById('rematch-overlay');
-            rematchOverlay.classList.remove('hidden');
+            document.getElementById('rematch-overlay').classList.remove('hidden');
             document.getElementById('rematch-title').textContent = battleState.lastLog;
-            
-            // Verifica ricompensa (se non ancora data per questa sessione)
             const sessionKey = "rewarded_" + currentGameSession;
             if (!localStorage.getItem(sessionKey)) {
-                if (battleState[myRole].hp > battleState[myRole === 'p1' ? 'p2' : 'p1'].hp) {
-                    rewardWinner();
-                }
+                let myZones = 0;
+                zones.forEach(z => { if(calculateZonePower(battleState, myRole, z) > calculateZonePower(battleState, myRole==='p1'?'p2':'p1', z)) myZones++; });
+                if (myZones >= 2) rewardWinner();
                 localStorage.setItem(sessionKey, "true");
             }
-
-            // Gestione Rematch
-            const acceptBtn = document.getElementById('rematch-accept-btn');
-            const declineBtn = document.getElementById('rematch-decline-btn');
-            const statusEl = document.getElementById('rematch-status');
-            const timerEl = document.getElementById('rematch-timer');
-
-            if (battleState[myRole].rematch) {
-                acceptBtn.disabled = true;
-                statusEl.textContent = "Hai accettato la rivincita. In attesa dell'avversario...";
-            }
-
-            const oppRole = myRole === 'p1' ? 'p2' : 'p1';
-            if (battleState[oppRole].rematch) {
-                statusEl.textContent = "L'avversario chiede la rivincita!";
-            }
-
-            if (battleState.p1.rematch && battleState.p2.rematch) {
-                // RESET PARTITA
-                const gameId = currentGameSession;
-                if (myRole === 'p1') {
-                    db.ref("games/" + gameId).update({
-                        p1: { uid: battleState.p1.uid, email: battleState.p1.email, team: battleState.p1.team, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
-                        p2: { uid: battleState.p2.uid, email: battleState.p2.email, team: battleState.p2.team, hp: 20, energy: 10, move: null, nextCostMod: 0, cooldowns: {} },
-                        status: "playing",
-                        turn: 1,
-                        lastLog: "RIVINCITA INIZIATA!",
-                        timestamp: Date.now()
-                    });
-                }
-                rematchOverlay.classList.add('hidden');
-                acceptBtn.disabled = false;
-                statusEl.textContent = "";
-                return;
-            }
-
-            acceptBtn.onclick = () => {
-                db.ref(`games/${currentGameSession}/${myRole}`).update({ rematch: true });
-            };
-            declineBtn.onclick = () => location.reload();
-
-            // Countdown di 15 secondi
-            if (!window.rematchTimerInterval) {
-                let timeLeft = 15;
-                window.rematchTimerInterval = setInterval(() => {
-                    timeLeft--;
-                    timerEl.textContent = timeLeft;
-                    if (timeLeft <= 0) {
-                        clearInterval(window.rematchTimerInterval);
-                        window.rematchTimerInterval = null;
-                        location.reload();
-                    }
-                }, 1000);
+            document.getElementById('rematch-accept-btn').onclick = () => db.ref(`games/${currentGameSession}/${myRole}`).update({ rematch: true });
+            document.getElementById('rematch-decline-btn').onclick = () => location.reload();
+            if (battleState.p1.rematch && battleState.p2.rematch && myRole === 'p1') {
+                db.ref(`games/${currentGameSession}`).update({
+                    p1: { uid: battleState.p1.uid, email: battleState.p1.email, team: battleState.p1.team, energy: 1, zones: { sinistra: [], centro: [], destra: [] }, move: null },
+                    p2: { uid: battleState.p2.uid, email: battleState.p2.email, team: battleState.p2.team, energy: 1, zones: { sinistra: [], centro: [], destra: [] }, move: null },
+                    status: "playing", turn: 1, lastLog: "Rivincita!", timestamp: Date.now()
+                });
             }
         }
     }
 
-    function renderEnergy(id, count) {
-        const cont = document.getElementById(id);
-        cont.innerHTML = '';
-        for (let i = 0; i < 10; i++) {
-            const pip = document.createElement('div');
-            pip.className = `energy-pip ${i < count ? 'active' : ''}`;
-            cont.appendChild(pip);
-        }
-    }
-
-    function getCardCost(card, player) {
-        const costs = { Common: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5 };
-        let base = costs[card.rarity];
-        if (player.nextCostMod) {
-            base = Math.max(1, base + player.nextCostMod);
-        }
-        return base;
-    }
-
-    function getSynergies(teamIds) {
-        const team = teamIds.map(id => CARDS.find(c => c.id === id));
-        const counts = { attacco: 0, difesa: 0, supporto: 0, controllo: 0 };
-        team.forEach(c => { if(c) counts[c.role]++; });
-
-        return {
-            allForce: counts.supporto >= 2 ? 1 : 0,
-            stealEnergy: counts.controllo >= 2,
-            regenHp: counts.difesa >= 2 ? 2 : 0,
-            attackForce: counts.attacco >= 3 ? 1 : 0
-        };
-    }
 
     async function resolveTurn(gameId) {
         const gameRef = db.ref("games/" + gameId);
-        const snap = await gameRef.once("value");
-        const g = snap.val();
+        const g = (await gameRef.once("value")).val();
+        const zones = ['sinistra', 'centro', 'destra'];
         
-        const c1 = g.p1.move !== -1 ? CARDS.find(c => c.id == g.p1.move) : null;
-        const c2 = g.p2.move !== -1 ? CARDS.find(c => c.id == g.p2.move) : null;
+        if (!g.blockedZones) g.blockedZones = [];
+        g.blockedZones = []; 
 
-        const syn1 = getSynergies(g.p1.team);
-        const syn2 = getSynergies(g.p2.team);
-
-        // Step 1: Base Force
-        let f1 = c1 ? ({ Common:1, Rare:2, Epic:3, Legendary:4, Mythic:5 }[c1.rarity] + (g.p1.moveElite ? 1 : 0)) : 0;
-        let f2 = c2 ? ({ Common:1, Rare:2, Epic:3, Legendary:4, Mythic:5 }[c2.rarity] + (g.p2.moveElite ? 1 : 0)) : 0;
-
-        // Synergies Base
-        f1 += syn1.allForce;
-        f2 += syn2.allForce;
-        if (c1 && c1.role === "attacco") f1 += syn1.attackForce;
-        if (c2 && c2.role === "attacco") f2 += syn2.attackForce;
-
-        // Step 1.5: Role RPS Bonus
-        const ROLE_COUNTERS = {
-            "attacco": "supporto",
-            "supporto": "controllo",
-            "controllo": "difesa",
-            "difesa": "attacco"
-        };
-        if (c1 && c2) {
-            if (ROLE_COUNTERS[c1.role] === c2.role) f1 += 1;
-            if (ROLE_COUNTERS[c2.role] === c1.role) f2 += 1;
-        }
-
-        // Step 2: Traits Counter
-        const TRAIT_COUNTERS = {
-            "Rapido": { "Fisico": 1, "Strategico": 2 },
-            "Fisico": { "Strategico": 1, "Dribblatore": 2 },
-            "Strategico": { "Dribblatore": 1, "Leader": 2 },
-            "Dribblatore": { "Leader": 1, "Cecchino": 2 },
-            "Leader": { "Cecchino": 1, "Tecnico": 2 },
-            "Cecchino": { "Tecnico": 1, "Rapido": 2 },
-            "Tecnico": { "Rapido": 1, "Fisico": 2 },
-            "Jolly": { "any": 1 }
+        const applyOnPlay = (p, roleStr) => {
+            if (Array.isArray(p.move)) {
+                p.move.forEach(m => {
+                    const card = CARDS.find(x => x.id == m.id);
+                    let pwr = card.power;
+                    let occupiedSlots = 1;
+                    if (card.ability && card.ability.type === "ongoing" && card.ability.effect === "questa carta occupa 2 slot") occupiedSlots = 2;
+                    
+                    if (card.ability && card.ability.type === "on_play") {
+                        const effect = card.ability.effect;
+                        if (effect === "+2 potere se giocata a SINISTRA o DESTRA" && (m.zone === 'sinistra' || m.zone === 'destra')) pwr += 2;
+                        if (effect === "+1 per ogni alleato già nella zona") pwr += p.zones[m.zone].length;
+                        if (effect === "se sei in svantaggio qui → +3") {
+                            if (calculateZonePower(g, roleStr, m.zone) < calculateZonePower(g, roleStr==='p1'?'p2':'p1', m.zone)) pwr += 3;
+                        }
+                        if (effect === "riduci potere nemico nella zona di -1") {
+                            const opp = roleStr === 'p1' ? g.p2 : g.p1;
+                            opp.zones[m.zone].forEach(o => {
+                                if (CARDS.find(x => x.id == o.id).ability.effect !== "questa carta non può essere ridotta") o.power -= 1;
+                            });
+                        }
+                        if (effect === "gioca una copia con potere 1 in un’altra zona") {
+                            const otherZones = zones.filter(z => z !== m.zone && p.zones[z].length < 4);
+                            if (otherZones.length > 0) {
+                                const targetZ = otherZones[Math.floor(Math.random()*otherZones.length)];
+                                p.zones[targetZ].push({ id: m.id, power: 1 });
+                            }
+                        }
+                    }
+                    p.zones[m.zone].push({ id: m.id, power: pwr });
+                    if (occupiedSlots === 2) p.zones[m.zone].push({ id: "slot_filler", power: 0 });
+                });
+            }
         };
 
-        function getTraitBonus(t1, t2) {
-            if (t1 === "Jolly") return 1;
-            if (TRAIT_COUNTERS[t1] && TRAIT_COUNTERS[t1][t2]) return TRAIT_COUNTERS[t1][t2];
-            return 0;
-        }
+        applyOnPlay(g.p1, 'p1'); 
+        applyOnPlay(g.p2, 'p2');
 
-        if (c1 && c2) {
-            f1 += getTraitBonus(c1.tratto, c2.tratto);
-            f2 += getTraitBonus(c2.tratto, c1.tratto);
-        }
+        zones.forEach(z => {
+            [g.p1, g.p2].forEach(p => {
+                const roleStr = p === g.p1 ? 'p1' : 'p2';
+                const opp = roleStr === 'p1' ? g.p2 : g.p1;
+                p.zones[z].forEach((cObj, idx) => {
+                    if (cObj.id === "slot_filler") return;
+                    const card = CARDS.find(x => x.id == cObj.id);
+                    if (card && card.ability && card.ability.type === "on_reveal") {
+                        const effect = card.ability.effect;
+                        if (effect === "+2 per ogni carta avversaria qui") cObj.power += (opp.zones[z].length * 2);
+                        if (effect === "sposta una carta avversaria in un’altra zona") {
+                            const targets = opp.zones[z].filter(o => o.id !== "slot_filler" && CARDS.find(x => x.id == o.id).ability.effect !== "non può essere spostata");
+                            if (targets.length > 0) {
+                                const targetCard = targets[Math.floor(Math.random() * targets.length)];
+                                const otherZones = zones.filter(oz => oz !== z && opp.zones[oz].length < 4);
+                                if (otherZones.length > 0) {
+                                    const oz = otherZones[Math.floor(Math.random()*otherZones.length)];
+                                    const tIdx = opp.zones[z].indexOf(targetCard);
+                                    opp.zones[oz].push(opp.zones[z].splice(tIdx, 1)[0]);
+                                }
+                            }
+                        }
+                        if (effect === "copia il potere più alto nella zona") {
+                            let maxP = 0;
+                            [...p.zones[z], ...opp.zones[z]].forEach(o => { if(o.power > maxP) maxP = o.power; });
+                            cObj.power = maxP;
+                        }
+                        if (effect === "scambia posizione con una tua carta in un’altra zona") {
+                            const otherCards = [];
+                            zones.filter(oz => oz !== z).forEach(oz => p.zones[oz].forEach((oc, oidx) => { if(oc.id !== "slot_filler") otherCards.push({z: oz, idx: oidx}); }));
+                            if (otherCards.length > 0) {
+                                const target = otherCards[Math.floor(Math.random()*otherCards.length)];
+                                const temp = {...cObj};
+                                p.zones[z][idx] = p.zones[target.z][target.idx];
+                                p.zones[target.z][target.idx] = temp;
+                            }
+                        }
+                        if (effect === "distruggi la carta con potere più basso (anche tua)") {
+                            let minP = 999;
+                            [...p.zones[z], ...opp.zones[z]].forEach(o => { if(o.id !== "slot_filler" && o.power < minP) minP = o.power; });
+                            const candidates = [];
+                            p.zones[z].forEach((o, i) => { if(o.id !== "slot_filler" && o.power === minP) candidates.push({p: p, z: z, i: i}); });
+                            opp.zones[z].forEach((o, i) => { if(o.id !== "slot_filler" && o.power === minP) candidates.push({p: opp, z: z, i: i}); });
+                            if (candidates.length > 0) {
+                                const victim = candidates[Math.floor(Math.random()*candidates.length)];
+                                victim.p.zones[victim.z].splice(victim.i, 1);
+                            }
+                        }
+                        if (effect === "blocca questa zona nel prossimo turno") g.blockedZones.push(z);
+                    }
+                });
+            });
+        });
 
-        // Step 3: Abilities
-        let a1Active = c1 && (!c2 || c2.ability !== "Pressing");
-        let a2Active = c2 && (!c1 || c1.ability !== "Pressing");
-        
-        g.p1.nextCostMod = 0;
-        g.p2.nextCostMod = 0;
-
-        // Ability Logic
-        if (a1Active) {
-            if (c1.ability === "Assist") g.p1.nextCostMod = -1;
-            if (c1.ability === "Dribbling Ubriacante" && c2 && c2.role === "difesa") f1 += 2;
-            if (c1.ability === "Contropiede" && c2 && c2.role === "attacco") f1 += 2;
-            if (c1.ability === "Zona Cesarini" && g.p1.hp < 5) f1 += 3;
-        }
-        if (a2Active) {
-            if (c2.ability === "Assist") g.p2.nextCostMod = -1;
-            if (c2.ability === "Dribbling Ubriacante" && c1 && c1.role === "difesa") f2 += 2;
-            if (c2.ability === "Contropiede" && c1 && c1.role === "attacco") f2 += 2;
-            if (c2.ability === "Zona Cesarini" && g.p2.hp < 5) f2 += 3;
-        }
-
-        // Step 4: Damage Calculation
-        let d1 = Math.max(0, f2 - f1);
-        let d2 = Math.max(0, f1 - f2);
-
-        if (a1Active && c1.ability === "Muro") d1 = Math.max(0, d1 - 1);
-        if (a2Active && c2.ability === "Muro") d2 = Math.max(0, d2 - 1);
-
-        g.p1.hp -= d1;
-        g.p2.hp -= d2;
-
-        // Gestione Cooldown (Blocco 2 turni)
-        if (g.p1.move !== -1) {
-            if (!g.p1.cooldowns) g.p1.cooldowns = {};
-            g.p1.cooldowns[g.p1.move] = g.turn;
-        }
-        if (g.p2.move !== -1) {
-            if (!g.p2.cooldowns) g.p2.cooldowns = {};
-            g.p2.cooldowns[g.p2.move] = g.turn;
-        }
-
-        // Synergies End Turn
-        if (syn1.regenHp) g.p1.hp = Math.min(20, g.p1.hp + syn1.regenHp);
-        if (syn2.regenHp) g.p2.hp = Math.min(20, g.p2.hp + syn2.regenHp);
-
-        let energySteal1 = 0, energySteal2 = 0;
-        if (syn1.stealEnergy) energySteal1 = 1;
-        if (syn2.stealEnergy) energySteal2 = 1;
-
-        let log = "";
-        if (c1 && c2) log = `${c1.name} vs ${c2.name}: `;
-        else if (c1) log = `${c1.name} attacca direttamente! `;
-        else if (c2) log = `L'avversario attacca direttamente! `;
-        else log = "Entrambi hanno passato il turno. ";
-
-        if (d2 > d1) log += `P1 infligge ${d2} danni!`;
-        else if (d1 > d2) log += `P2 infligge ${d1} danni!`;
-        else log += "Pareggio!";
-
-        // Dynamic Energy: Winner gets +1, Loser gets +3 (for comeback)
-        let energyGain1 = 1;
-        let energyGain2 = 1;
-
-        if (g.p1.move === -1) energyGain1 = 2; // Bonus for passing
-        if (g.p2.move === -1) energyGain2 = 2;
-
-        if (d2 > d1) { // P1 wins clash
-            energyGain1 = Math.max(energyGain1, 1);
-            energyGain2 = Math.max(energyGain2, 3);
-        } else if (d1 > d2) { // P2 wins clash
-            energyGain1 = Math.max(energyGain1, 3);
-            energyGain2 = Math.max(energyGain2, 1);
-        }
-
-        // Prep Next Turn
-        g.turn += 1;
-        g.p1.move = null; g.p2.move = null;
-        g.p1.energy = Math.min(10, g.p1.energy + energyGain1 + energySteal1 - energySteal2);
-        g.p2.energy = Math.min(10, g.p2.energy + energyGain2 + energySteal2 - energySteal1);
-        g.p1.energy = Math.max(0, g.p1.energy);
-        g.p2.energy = Math.max(0, g.p2.energy);
-        g.lastLog = log;
-
-        if (g.p1.hp <= 0 || g.p2.hp <= 0 || g.turn > 10) {
+        g.turn++;
+        if (g.turn > 6) {
             g.status = "finished";
-            if (g.p1.hp > g.p2.hp) g.lastLog = "Vince " + g.p1.email;
-            else if (g.p2.hp > g.p1.hp) g.lastLog = "Vince " + g.p2.email;
-            else g.lastLog = "Pareggio finale!";
+            let p1Zones = 0, p2Zones = 0;
+            zones.forEach(z => {
+                const p1P = calculateZonePower(g, 'p1', z);
+                const p2P = calculateZonePower(g, 'p2', z);
+                if (p1P > p2P) p1Zones++; else if (p2P > p1P) p2Zones++;
+            });
+            if (p1Zones > p2Zones) g.lastLog = "Vittoria per P1!";
+            else if (p2Zones > p1Zones) g.lastLog = "Vittoria per P2!";
+            else g.lastLog = "Pareggio epico!";
+        } else {
+            g.p1.energy = g.turn; g.p2.energy = g.turn;
+            g.p1.move = null; g.p2.move = null;
+            g.lastLog = `Turno ${g.turn} - Energia: ${g.turn}`;
         }
-
         await gameRef.set(g);
     }
 
@@ -1614,7 +1520,7 @@ document.addEventListener('DOMContentLoaded', () => {
  
 function renderMercato() { 
     const grid = document.getElementById('mercato-grid'); grid.innerHTML = ''; 
-    const MULTIPLIER = 1.7; // 170%
+    const MULTIPLIER = 3.0; // 300% come richiesto
     [...CARDS].sort((a,b) => a.id - b.id).forEach(c => { 
         const cost = Math.floor(c.value * MULTIPLIER);
         const div = document.createElement('div'); div.className = `card rarity-${c.rarity.toLowerCase()}`; 
